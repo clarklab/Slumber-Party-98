@@ -264,12 +264,7 @@ function renderChat(body, buddyId) {
       <div class="choices" id="chat-choices"></div>
       <div class="status-bar"><p class="status-bar-field">${escapeHtml(b.profile)}</p></div>
     </div>`;
-  body.querySelector("[data-back-buddies]").addEventListener("click", () => {
-    state.currentBuddy = null;
-    const root = document.getElementById("body-messenger");
-    if (isDesktopShell() && root?.querySelector("#im-side")) renderMessengerDesktop(root);
-    else renderBuddyList(root || body);
-  });
+  body.querySelector("[data-back-buddies]").addEventListener("click", () => goBuddyList(body));
   bindLinks(body);
   const logEl = body.querySelector("#chat-log");
   chat.log.forEach((m) => appendMsg(logEl, m));
@@ -331,10 +326,7 @@ function showChoices(body, buddyId, nodeId) {
   const choices = node.choices || [];
   if (!choices.length) {
     choiceEl.innerHTML = `<button type="button" data-back-buddies>Back to Buddy List</button>`;
-    choiceEl.querySelector("[data-back-buddies]")?.addEventListener("click", () => {
-      state.currentBuddy = null;
-      renderBuddyList(body);
-    });
+    choiceEl.querySelector("[data-back-buddies]")?.addEventListener("click", () => goBuddyList(body));
     return;
   }
   choiceEl.innerHTML = choices
@@ -389,7 +381,19 @@ function appendMsg(logEl, m) {
   logEl.appendChild(wrap);
 }
 
+function goBuddyList(fromEl) {
+  state.currentBuddy = null;
+  const root = document.getElementById("body-messenger");
+  if (isDesktopShell() && root?.querySelector("#im-side")) renderMessengerDesktop(root);
+  else renderBuddyList(root || fromEl);
+}
+
 export function injectNode(buddyId, nodeId) {
+  const node = CHATS[buddyId]?.[nodeId];
+  if (node) {
+    (node.flags || []).forEach((f) => setFlag(f));
+    (node.clues || []).forEach((c) => addClue(c.id, c.note));
+  }
   const chat = ensureChat(buddyId);
   chat.seenStart = true;
   chat.node = nodeId;
@@ -785,7 +789,7 @@ function registerNotepad() {
       body.querySelectorAll("[data-doc]").forEach((b) =>
         b.addEventListener("click", () => {
           state.notepadDoc = b.getAttribute("data-doc");
-          if (["lastnight", "draft", "passwords", "letters", "index"].includes(state.notepadDoc)) {
+          if (["lastnight", "draft", "passwords", "letters", "index", "invite", "nfo"].includes(state.notepadDoc)) {
             setFlag("read_file");
             addClue("read_file", `Opened ${state.notepadDoc}`);
           }
@@ -892,7 +896,7 @@ function registerHelp() {
       body.innerHTML = `<div class="app-scroll web-98">
         <h1>What to do when you don't know what happened</h1>
         <p>1. Open <b>BuddyBee</b>. People will send pictures. Click the pictures. The night only makes sense in order.</p>
-        <p>2. The order is pizza → movie → sleeping bags → mom in the doorway → the window → the board → maple street.</p>
+        <p>2. The order is pizza → movie → sleeping bags → mom in the doorway → after she left → the window → the board → maple street.</p>
         <p>3. Lauren has a frame she is not sending yet. It is not from the party.</p>
         <p>4. Write it in <b>ScratchPad</b> or it will rearrange itself.</p>
         <p>5. Encyclopedia Tropicana is for when you want a dead girl in 1978 to be the explanation.</p>

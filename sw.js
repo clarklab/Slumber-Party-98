@@ -1,4 +1,4 @@
-const CACHE = "hs98-v6";
+const CACHE = "hs98-v7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -14,7 +14,6 @@ const ASSETS = [
   "./js/icons.js",
   "./js/ascii.js",
   "./js/setup.js",
-  "./img/og-image.png",
   "./img/wallpaper.jpg",
   "./img/photo-pizza.jpg",
   "./img/photo-movie.jpg",
@@ -30,6 +29,7 @@ const ASSETS = [
   "./img/icon-192.png",
   "./img/icon-512.png",
   "./img/apple-touch-icon.png",
+  "./img/favicon-32.png",
 ];
 
 self.addEventListener("install", (e) => {
@@ -37,11 +37,15 @@ self.addEventListener("install", (e) => {
 });
 
 self.addEventListener("activate", (e) => {
-  e.waitUntil(self.clients.claim());
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener("fetch", (e) => {
-  e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request))
-  );
+  if (e.request.method !== "GET") return;
+  e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
 });

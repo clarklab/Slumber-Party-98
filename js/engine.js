@@ -102,6 +102,7 @@ function maybeClimax() {
     "saw_movie",
     "saw_bags",
     "saw_mom",
+    "saw_basement",
     "saw_window",
     "saw_ouija",
     "saw_leaving",
