@@ -16,6 +16,10 @@ python3 -m http.server 8080
 
 Then visit `http://localhost:8080`.
 
+## Host
+
+Static files. On Netlify: empty build command, publish directory `.`, HTTPS on. Custom domain `slumberparty.superfun.games` is a CNAME to the site's `*.netlify.app` hostname.
+
 ## How it works
 
 The party only makes sense as a roll of film:

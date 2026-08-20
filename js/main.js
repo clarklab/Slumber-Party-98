@@ -96,15 +96,18 @@ function showAsciiIntro() {
   playChord("start");
   return new Promise((resolve) => {
     let done = false;
+    const root = overlay();
     const go = () => {
       if (done) return;
       done = true;
+      root.removeEventListener("click", go);
+      window.removeEventListener("resize", fitAscii);
       resolve();
     };
-    overlay().addEventListener("click", go);
+    root.addEventListener("click", go);
+    window.addEventListener("resize", fitAscii);
     setTimeout(go, 5200);
     requestAnimationFrame(fitAscii);
-    window.addEventListener("resize", fitAscii);
   });
 }
 
@@ -226,6 +229,7 @@ async function runClimaxReel() {
   await wait(9000);
   setClimax(4);
   BUDDIES.mandy.online = true;
+  setFlag("mandy_signed_on");
   injectNode("mandy", "ghost");
   await wait(7000);
   setClimax(5);

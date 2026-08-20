@@ -81,14 +81,6 @@ export function showSetupWizard({ root, onComplete, getPrompt, consumePrompt }) 
   next.addEventListener("click", goNext);
   cancel.addEventListener("click", () => cannotQuit(root));
   root.querySelector("#setup-x").addEventListener("click", () => cannotQuit(root));
-  root.querySelector("#setup-skip")?.addEventListener("click", () => {});
-  root.addEventListener("click", (e) => {
-    if (e.target.closest("#setup-skip")) {
-      st.shortcutOk = true;
-      sessionStorage.setItem("hs98-installed", "1");
-      goNext();
-    }
-  });
 
   paint();
   if (isStandalone()) {
