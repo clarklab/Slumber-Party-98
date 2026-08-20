@@ -1,4 +1,4 @@
-/** Period VGA / BBS intro mark — same art as img/og-image.png */
+/** Period VGA / BBS intro mark — boot splash + C:\My Documents\SLUMBER.NFO */
 
 export const ASCII_INTRO = String.raw`
       ░▒▓█▓▒░  millhaven bbs  node 4  14.4k  ░▒▓█▓▒░
