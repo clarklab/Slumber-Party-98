@@ -9,6 +9,7 @@ import {
 } from "./engine.js";
 import { bindShell, hideStart, paintClock } from "./wm.js";
 import { registerApps, paintDesktop, injectNode, viewPhoto } from "./apps.js";
+import { showSetupWizard } from "./setup.js";
 import { asciiIntroHtml } from "./ascii.js";
 import { BUDDIES } from "./story.js";
 
@@ -50,55 +51,16 @@ async function boot() {
 }
 
 function showWizard() {
-  showOverlay(`
-    <div class="scrim">
-      <div class="window wizard">
-        <div class="title-bar"><div class="title-bar-text">HomeSoft 98 Setup</div></div>
-        <div class="window-body">
-          <div class="wizard-hero">
-            <div class="side">HomeSoft<br>98</div>
-            <div class="wizard-copy">
-              <h2>Add this computer to your Home Screen.</h2>
-              <p>This is not a web page. It is Sarah Quinn's bedroom PC, Sunday morning, October 18, 1998. It needs to run full screen or the chrome shows.</p>
-              <fieldset>
-                <legend>On iPhone / iPad</legend>
-                <p>Tap <b>Share</b> (the square with the arrow) → <b>Add to Home Screen</b> → Add. Then open <b>HomeSoft 98</b> from your home screen.</p>
-              </fieldset>
-              <fieldset style="margin-top:8px">
-                <legend>On Android</legend>
-                <p>Tap <b>Install</b> below, or Chrome menu → <b>Install app</b> / <b>Add to Home screen</b>.</p>
-              </fieldset>
-              <div class="field-row" style="margin-top:10px">
-                <input type="checkbox" id="added">
-                <label for="added">I added HomeSoft 98 to my home screen.</label>
-              </div>
-              <div class="wizard-actions">
-                <button type="button" id="install">Install...</button>
-                <button type="button" class="default" id="finish">Finish</button>
-              </div>
-              <p style="font-size:12px;margin-top:10px;color:#000080">If you are already on a computer, Finish still works. The house is the same size as the screen.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`);
-  overlay().querySelector("#install").addEventListener("click", async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
+  showSetupWizard({
+    root: overlay(),
+    getPrompt: () => deferredPrompt,
+    consumePrompt: () => {
       deferredPrompt = null;
-    } else {
-      alert("Use your browser menu: Add to Home Screen / Install app.");
-    }
-  });
-  overlay().querySelector("#finish").addEventListener("click", () => {
-    const ok = overlay().querySelector("#added").checked || isStandalone();
-    if (!ok) {
-      overlay().querySelector("#added").focus();
-      return;
-    }
-    sessionStorage.setItem("hs98-installed", "1");
-    runBootThenLogin();
+    },
+    onComplete: () => {
+      sessionStorage.setItem("hs98-installed", "1");
+      runBootThenLogin();
+    },
   });
 }
 

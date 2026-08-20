@@ -45,6 +45,18 @@ export const icons = {
   help: svg(
     `<circle cx="24" cy="24" r="16" fill="#000080" stroke="#fff"/><text x="19" y="30" fill="#fff" font-size="20" font-family="serif">?</text>`
   ),
+  setup: svg(
+    `<rect x="8" y="8" width="28" height="22" fill="#c0c0c0" stroke="#000"/><rect x="11" y="11" width="22" height="14" fill="#000080"/><rect x="16" y="32" width="12" height="3" fill="#c0c0c0" stroke="#000"/><circle cx="36" cy="34" r="9" fill="#d0d0d0" stroke="#000"/><circle cx="36" cy="34" r="3" fill="#800000"/><path d="M36 25v18M27 34h18" stroke="#808080"/>`
+  ),
+  shortcut: svg(
+    `<rect x="4" y="6" width="28" height="22" fill="#c0c0c0" stroke="#000"/><rect x="7" y="9" width="22" height="14" fill="#000080"/><path d="M20 28l16-16h-8l10-8-8 10V6z" fill="#ffd200" stroke="#000"/>`
+  ),
+  info: svg(
+    `<circle cx="24" cy="24" r="16" fill="#000080" stroke="#fff"/><text x="20" y="30" fill="#fff" font-size="20" font-family="serif">i</text>`
+  ),
+  warning: svg(
+    `<polygon points="24,4 46,42 2,42" fill="#ffd200" stroke="#000"/><text x="20" y="36" fill="#000" font-size="20" font-family="serif">!</text>`
+  ),
 };
 
 export function img(name, cls = "glyph") {
