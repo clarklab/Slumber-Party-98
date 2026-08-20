@@ -38,4 +38,6 @@ Chat, Millhaven news, Encyclopedia Tropicana, the file explorer, and ScratchPad 
 
 The boot intro is a CP437/ANSI **SLUMBER PARTY 98** mark (also in `C:\My Documents\SLUMBER.NFO`). The Open Graph card is Lauren's pizza-party print with pink marker: *What happened at slumber party 98?* (`img/og-image.png`, 1200×630).
 
+Sounds are synthesized in the browser (Web Audio) — 98-style blips, not Microsoft `.wav` files. Tray speaker mutes them.
+
 Styled with [98.css](https://jdan.github.io/98.css/).
