@@ -1,4 +1,4 @@
-import { state, emit, on, dateStr, isDesktopShell, syncShellClass } from "./engine.js";
+import { state, emit, on, dateStr, isDesktopShell, syncShellClass, hold, release, signalAck } from "./engine.js";
 import { icons } from "./icons.js";
 import { play, bindAudio, toggleMuted, paintMuteButton, isMuted } from "./audio.js";
 
@@ -241,9 +241,11 @@ export function closeApp(id) {
   }
   const i = openOrder.indexOf(id);
   if (i >= 0) openOrder.splice(i, 1);
+  releaseWindow(id);
   paintTaskbar();
   const last = openOrder[openOrder.length - 1];
   if (last) focusApp(last);
+  else updateAppHold();
 }
 
 export function minimizeApp(id) {
@@ -251,7 +253,31 @@ export function minimizeApp(id) {
   if (el) el.classList.add("minimized");
   const i = openOrder.indexOf(id);
   if (i >= 0) openOrder.splice(i, 1);
+  releaseWindow(id);
   paintTaskbar();
+  updateAppHold();
+}
+
+function releaseWindow(id) {
+  if (id === "messenger") {
+    const chatting = state.currentBuddy;
+    release("stream");
+    release("choices");
+    if (chatting) signalAck(chatting);
+    state.currentBuddy = null;
+  }
+}
+
+let appHoldId = null;
+
+function updateAppHold() {
+  const id = openOrder[openOrder.length - 1];
+  const el = id && document.getElementById(`win-${id}`);
+  const next = el && !el.classList.contains("minimized") && id !== "messenger" ? id : null;
+  if (appHoldId === next) return;
+  if (appHoldId) release("app:" + appHoldId);
+  appHoldId = next;
+  if (appHoldId) hold("app:" + appHoldId);
 }
 
 export function focusApp(id) {
@@ -268,6 +294,7 @@ export function focusApp(id) {
   const el = document.getElementById(`win-${id}`);
   if (el) el.style.zIndex = String(20 + openOrder.length);
   paintTaskbar();
+  updateAppHold();
 }
 
 export function setTitle(id, title) {

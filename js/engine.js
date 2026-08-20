@@ -160,3 +160,96 @@ export function isStandalone() {
   const mq = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
   return mq || window.navigator.standalone === true;
 }
+
+/* One action at a time. Holds block the next IM, ad, or climax beat until the
+   player taps or closes the current thing. Ads also wait for a real action after
+   a gag so two popups never chain. Balloon/popup holds do not count as that action. */
+const holds = new Set();
+const idleWaiters = [];
+const SOFT_HOLDS = new Set(["popup", "balloon"]);
+let afterGag = false;
+let idleKick = false;
+let ackWaiters = [];
+let ackBuddy = null;
+
+export function hold(reason) {
+  if (!reason) return;
+  if (!SOFT_HOLDS.has(reason)) afterGag = false;
+  holds.add(reason);
+}
+
+export function release(reason) {
+  if (!reason || !holds.delete(reason)) return;
+  kickIdle();
+}
+
+export function isHeld() {
+  return holds.size > 0;
+}
+
+export function setAfterGag(on = true) {
+  afterGag = !!on;
+  if (!afterGag) kickIdle();
+}
+
+function pickWaiter() {
+  if (holds.size > 0) return null;
+  const story = idleWaiters.findIndex((w) => w.kind === "story");
+  if (story >= 0) return idleWaiters.splice(story, 1)[0];
+  if (afterGag) return null;
+  const gag = idleWaiters.findIndex((w) => w.kind === "gag");
+  if (gag >= 0) return idleWaiters.splice(gag, 1)[0];
+  return null;
+}
+
+function kickIdle() {
+  if (idleKick) return;
+  idleKick = true;
+  queueMicrotask(runIdle);
+}
+
+function runIdle() {
+  idleKick = false;
+  if (holds.size > 0) return;
+  const w = pickWaiter();
+  if (!w) return;
+  try {
+    w.fn();
+  } finally {
+    if (holds.size === 0) kickIdle();
+  }
+}
+
+export function onIdle(fn) {
+  idleWaiters.push({ fn, kind: "story" });
+  kickIdle();
+}
+
+export function onGap(fn) {
+  idleWaiters.push({ fn, kind: "gag" });
+  kickIdle();
+}
+
+export function whenIdle(fn) {
+  return new Promise((resolve) => {
+    onIdle(() => resolve(fn ? fn() : undefined));
+  });
+}
+
+export function waitForAck() {
+  return new Promise((resolve) => {
+    ackWaiters.push(resolve);
+  });
+}
+
+export function expectAck(buddyId) {
+  ackBuddy = buddyId || null;
+}
+
+export function signalAck(buddyId) {
+  if (!ackWaiters.length) return;
+  if (ackBuddy && buddyId && buddyId !== ackBuddy) return;
+  ackBuddy = null;
+  const waiters = ackWaiters.splice(0);
+  for (const fn of waiters) fn();
+}

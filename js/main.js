@@ -7,9 +7,14 @@ import {
   setFlag,
   flag,
   markUnread,
+  hold,
+  release,
+  expectAck,
+  whenIdle,
+  waitForAck,
 } from "./engine.js";
 import { bindShell, hideStart, paintClock } from "./wm.js";
-import { registerApps, paintDesktop, injectNode, viewPhoto, showImAlert } from "./apps.js";
+import { registerApps, paintDesktop, injectNode, showImAlert } from "./apps.js";
 import { startPopups } from "./popups.js";
 import { showSetupWizard } from "./setup.js";
 import { asciiIntroHtml } from "./ascii.js";
@@ -25,10 +30,12 @@ const overlay = () => document.getElementById("overlay-root");
 
 function showOverlay(html) {
   overlay().innerHTML = html;
+  hold("overlay");
 }
 
 function clearOverlay() {
   overlay().innerHTML = "";
+  release("overlay");
 }
 
 async function boot() {
@@ -169,14 +176,8 @@ function markUnreadStart() {
   markUnread("jess");
   markUnread("lauren");
   play("modem");
-  setTimeout(() => {
-    play("im");
-    showImAlert("jess", "start");
-  }, 900);
-  setTimeout(() => {
-    play("im");
-    showImAlert("lauren", "start");
-  }, 2000);
+  showImAlert("jess", "start");
+  showImAlert("lauren", "start");
 }
 
 function onShutdown() {
@@ -230,27 +231,30 @@ function onClimax({ stage }) {
 }
 
 async function runClimaxReel() {
-  await wait(5000);
-  injectNode("jess", "police");
-  await wait(12000);
+  await beat("jess", "police");
   setFlag("body_found");
   setClimax(2);
-  injectNode("jess", "found");
+  await beat("jess", "found");
   state.browserUrl = "found";
-  await wait(11000);
   setClimax(3);
-  injectNode("lauren", "proof");
-  viewPhoto("proof", { force: true });
-  await wait(7000);
-  injectNode("britt", "proof");
-  await wait(9000);
+  await beat("lauren", "proof");
+  await beat("britt", "proof");
   setClimax(4);
   BUDDIES.mandy.online = true;
   setFlag("mandy_signed_on");
-  injectNode("mandy", "ghost");
-  await wait(7000);
+  await beat("mandy", "ghost");
   setClimax(5);
-  showCaughtDialog();
+  await whenIdle(() => {
+    showCaughtDialog();
+  });
+}
+
+function beat(buddyId, nodeId) {
+  return whenIdle(() => {
+    expectAck(buddyId);
+    injectNode(buddyId, nodeId);
+    return waitForAck();
+  });
 }
 
 function showCaughtDialog() {

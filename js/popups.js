@@ -1,14 +1,15 @@
-/** 1998 ad popups + Dial-Up phone fights. All dismissible. */
+/** 1998 ad popups + Dial-Up phone fights. Shown between moments, never on a timer. */
 
-import { state, on, flag, setFlag } from "./engine.js";
+import { state, on, setFlag, hold, release, setAfterGag, onGap } from "./engine.js";
 import { play } from "./audio.js";
 import { img } from "./icons.js";
 
 const seen = new Set();
 const queue = [];
-const scheduled = new Set();
 let busy = false;
+let currentId = null;
 let ringTimer = 0;
+let bound = false;
 
 function esc(s) {
   return String(s ?? "")
@@ -27,53 +28,57 @@ function overlayBusy() {
   return !!(o && o.innerHTML.trim());
 }
 
-function blocked() {
-  return !state.started || state.shutdown || state.climax > 0 || overlayBusy();
+function dropQueue() {
+  queue.length = 0;
 }
 
-function enqueue(id, delay = 0) {
-  if (seen.has(id) || queue.includes(id) || scheduled.has(id) || state.climax > 0) return;
-  const go = () => {
-    scheduled.delete(id);
-    if (seen.has(id) || queue.includes(id) || state.climax > 0) return;
-    queue.push(id);
-    pump();
-  };
-  if (delay) {
-    scheduled.add(id);
-    setTimeout(go, delay);
-  } else go();
+function offer(id) {
+  if (!id || seen.has(id) || queue.includes(id) || currentId === id) return;
+  if (!state.started || state.shutdown || state.climax > 0) return;
+  queue.push(id);
+  requestPump();
+}
+
+function requestPump() {
+  onGap(pump);
 }
 
 function pump() {
-  if (busy || !queue.length) return;
-  if (state.climax > 0 || state.shutdown) {
-    queue.length = 0;
+  if (busy || currentId || !queue.length) return;
+  if (state.shutdown || state.climax > 0) {
+    dropQueue();
     return;
   }
   if (overlayBusy()) {
-    setTimeout(pump, 900);
+    onGap(pump);
     return;
   }
   const id = queue.shift();
   if (seen.has(id) || !POPUPS[id]) {
-    pump();
+    if (queue.length) requestPump();
     return;
   }
   busy = true;
+  currentId = id;
   seen.add(id);
   setFlag("popup_" + id);
+  hold("popup");
   POPUPS[id].show();
 }
 
 function dismiss() {
+  const was = currentId;
+  currentId = null;
   clearInterval(ringTimer);
   ringTimer = 0;
   const el = host();
   if (el) el.innerHTML = "";
   busy = false;
   play("close");
-  setTimeout(pump, 280);
+  setAfterGag(true);
+  release("popup");
+  if (was === "phoneRing" && state.climax === 0) offer("phoneExt");
+  else if (queue.length) requestPump();
 }
 
 function shell(cls, title, body, footer) {
@@ -224,7 +229,6 @@ const POPUPS = {
         sleep: "Derek tells them \"she's dead to the world.\" Wording. They say they'll call back. You are very much not asleep. You are very much still on CedarNet.",
         ring: "Fourteen rings. It stops. You do not think about who it was. The modem sings its ugly little song. You're still here.",
       });
-      enqueue("phoneExt", 16000);
     },
   },
   phoneExt: {
@@ -301,30 +305,31 @@ function showPhoneResult(text) {
 }
 
 function onFlag({ name }) {
-  if (blocked() && !name.startsWith("talked_") && !name.startsWith("saw_")) return;
   if (name.startsWith("saw_") && ["pizza", "movie", "bags", "mom", "basement", "window", "ouija", "leaving"].some((p) => name === "saw_" + p)) {
-    enqueue("ool", 1400);
+    offer("ool");
   }
-  if (name === "read_news") enqueue("singles", 1200);
-  if (name === "read_wiki" || name === "saw_ouija" || name === "talked_chloe") enqueue("luna", 1600);
-  if (name.startsWith("talked_")) enqueue("phoneRing", 7000);
+  if (name === "read_news") offer("singles");
+  if (name === "read_wiki" || name === "saw_ouija" || name === "talked_chloe") offer("luna");
+  if (name.startsWith("talked_")) offer("phoneRing");
 }
 
 function onClue({ count }) {
-  if (count >= 3) enqueue("phoneRing", 8000);
+  if (count >= 3) offer("phoneRing");
 }
 
 export function startPopups() {
+  if (bound) return;
+  bound = true;
   seen.clear();
-  scheduled.clear();
   queue.length = 0;
   busy = false;
+  currentId = null;
   on("flag", onFlag);
   on("clue", onClue);
   on("climax", () => {
-    queue.length = 0;
+    dropQueue();
     const win = host()?.querySelector(".popup-win");
     if (win && !win.classList.contains("phone-win")) dismiss();
   });
-  enqueue("clearinghouse", 5600);
+  offer("clearinghouse");
 }
