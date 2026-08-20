@@ -2,6 +2,7 @@
 
 import { icons, img } from "./icons.js";
 import { isStandalone } from "./engine.js";
+import { play } from "./audio.js";
 
 function platform() {
   const ua = navigator.userAgent || "";
@@ -65,6 +66,7 @@ export function showSetupWizard({ root, onComplete, getPrompt, consumePrompt }) 
       if (fs && fs.checked && document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
+      play("ding");
       onComplete();
       return;
     }
@@ -74,21 +76,17 @@ export function showSetupWizard({ root, onComplete, getPrompt, consumePrompt }) 
 
   back.addEventListener("click", () => {
     if (st.step > 0) {
+      play("click");
       st.step -= 1;
       paint();
     }
   });
-  next.addEventListener("click", goNext);
+  next.addEventListener("click", () => {
+    play("click");
+    goNext();
+  });
   cancel.addEventListener("click", () => cannotQuit(root));
   root.querySelector("#setup-x").addEventListener("click", () => cannotQuit(root));
-  root.querySelector("#setup-skip")?.addEventListener("click", () => {});
-  root.addEventListener("click", (e) => {
-    if (e.target.closest("#setup-skip")) {
-      st.shortcutOk = true;
-      sessionStorage.setItem("hs98-installed", "1");
-      goNext();
-    }
-  });
 
   paint();
   if (isStandalone()) {
@@ -422,6 +420,7 @@ function cannotQuit(root) {
 }
 
 function showMsg(root, { title, icon, text }) {
+  play(icon === "warning" ? "warn" : "ding");
   let host = root.querySelector("#setup-msg");
   if (!host) {
     host = document.createElement("div");
@@ -442,6 +441,7 @@ function showMsg(root, { title, icon, text }) {
       </div>
     </div>`;
   host.querySelector("#msg-ok").addEventListener("click", () => {
+    play("click");
     host.innerHTML = "";
   });
 }

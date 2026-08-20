@@ -102,6 +102,7 @@ function maybeClimax() {
     "saw_movie",
     "saw_bags",
     "saw_mom",
+    "saw_basement",
     "saw_window",
     "saw_ouija",
     "saw_leaving",
@@ -143,46 +144,7 @@ export function ensureChat(id) {
   return state.chats[id];
 }
 
-export function playBeep() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.frequency.value = 880;
-    o.type = "square";
-    g.gain.value = 0.04;
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.start();
-    o.stop(ctx.currentTime + 0.08);
-    setTimeout(() => ctx.close(), 300);
-  } catch {
-    /* ignore */
-  }
-}
-
-export function playChord(kind = "start") {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const notes = kind === "start" ? [196, 262, 330, 392] : [392, 311, 247, 196];
-    notes.forEach((f, i) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = "triangle";
-      o.frequency.value = f;
-      g.gain.value = 0.05;
-      o.connect(g);
-      g.connect(ctx.destination);
-      const t = ctx.currentTime + i * 0.12;
-      o.start(t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-      o.stop(t + 0.55);
-    });
-    setTimeout(() => ctx.close(), 2000);
-  } catch {
-    /* ignore */
-  }
-}
+export { play, playBeep, playChord, bindAudio, toggleMuted, isMuted, paintMuteButton } from "./audio.js";
 
 export function isDesktopShell() {
   return window.matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)").matches;

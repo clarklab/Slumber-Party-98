@@ -2,13 +2,14 @@ import {
   state,
   on,
   isStandalone,
-  playChord,
+  play,
   setClimax,
   setFlag,
   flag,
+  markUnread,
 } from "./engine.js";
 import { bindShell, hideStart, paintClock } from "./wm.js";
-import { registerApps, paintDesktop, injectNode, viewPhoto } from "./apps.js";
+import { registerApps, paintDesktop, injectNode, viewPhoto, showImAlert } from "./apps.js";
 import { showSetupWizard } from "./setup.js";
 import { asciiIntroHtml } from "./ascii.js";
 import { BUDDIES } from "./story.js";
@@ -76,7 +77,7 @@ async function runBootThenLogin() {
         <p style="font-size:12px;opacity:.7">CedarNet 56k • Millhaven, Ohio</p>
       </div>
     </div>`);
-  playChord("start");
+  play("tada");
   const bar = overlay().querySelector("progress");
   for (let v = 8; v <= 100; v += 4) {
     await wait(70);
@@ -93,18 +94,20 @@ function showAsciiIntro() {
       </div>
       <button type="button" class="ascii-hint blink" id="ascii-go">tap to log on_</button>
     </div>`);
-  playChord("start");
   return new Promise((resolve) => {
     let done = false;
+    const root = overlay();
     const go = () => {
       if (done) return;
       done = true;
+      root.removeEventListener("click", go);
+      window.removeEventListener("resize", fitAscii);
       resolve();
     };
-    overlay().addEventListener("click", go);
+    root.addEventListener("click", go);
+    window.addEventListener("resize", fitAscii);
     setTimeout(go, 5200);
     requestAnimationFrame(fitAscii);
-    window.addEventListener("resize", fitAscii);
   });
 }
 
@@ -152,6 +155,7 @@ function showLogin() {
 }
 
 function enterDesktop() {
+  play("ding");
   state.started = true;
   clearOverlay();
   document.getElementById("desktop").hidden = false;
@@ -160,10 +164,17 @@ function enterDesktop() {
 }
 
 function markUnreadStart() {
-  ["jess", "lauren"].forEach((id) => {
-    state.unread[id] = (state.unread[id] || 0) + 1;
-  });
-  paintDesktop();
+  markUnread("jess");
+  markUnread("lauren");
+  play("modem");
+  setTimeout(() => {
+    play("im");
+    showImAlert("jess", "start");
+  }, 900);
+  setTimeout(() => {
+    play("im");
+    showImAlert("lauren", "start");
+  }, 2000);
 }
 
 function onShutdown() {
@@ -187,8 +198,12 @@ function onShutdown() {
         </div>
       </div>
     </div>`);
-  overlay().querySelector("#no").addEventListener("click", clearOverlay);
+  overlay().querySelector("#no").addEventListener("click", () => {
+    play("click");
+    clearOverlay();
+  });
   overlay().querySelector("#yes").addEventListener("click", () => {
+    play("warn");
     clearOverlay();
     showOverlay(`
       <div class="scrim" style="background:transparent">
@@ -200,7 +215,10 @@ function onShutdown() {
           </div>
         </div>
       </div>`);
-    overlay().querySelector("#ok").addEventListener("click", clearOverlay);
+    overlay().querySelector("#ok").addEventListener("click", () => {
+      play("ding");
+      clearOverlay();
+    });
   });
 }
 
@@ -226,6 +244,7 @@ async function runClimaxReel() {
   await wait(9000);
   setClimax(4);
   BUDDIES.mandy.online = true;
+  setFlag("mandy_signed_on");
   injectNode("mandy", "ghost");
   await wait(7000);
   setClimax(5);
@@ -249,12 +268,13 @@ function showCaughtDialog() {
         </div>
       </div>
     </div>`);
+  play("error");
   overlay().querySelector("#off").addEventListener("click", doShutdown);
 }
 
 function doShutdown() {
   state.shutdown = true;
-  playChord("end");
+  play("logoff");
   document.getElementById("desktop").hidden = true;
   showOverlay(`
     <div class="scrim black">

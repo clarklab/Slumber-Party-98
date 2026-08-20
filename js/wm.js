@@ -1,5 +1,18 @@
 import { state, emit, on, dateStr, isDesktopShell, syncShellClass } from "./engine.js";
 import { icons } from "./icons.js";
+import { play, bindAudio, toggleMuted, paintMuteButton, isMuted } from "./audio.js";
+
+const flashing = new Set();
+
+export function flashTask(id) {
+  flashing.add(id);
+  paintTaskbar();
+}
+
+export function clearFlash(id) {
+  if (!flashing.delete(id)) return;
+  paintTaskbar();
+}
 
 const registry = new Map();
 const openOrder = [];
@@ -210,6 +223,7 @@ export function openApp(id, opts = {}) {
     bindWindowChrome(el, id);
     if (desk) applyGeom(el, nextGeom(id));
     else el.classList.add("maximized");
+    play("open");
   }
   el.classList.remove("minimized");
   if (desk && !el.style.width) applyGeom(el, nextGeom(id));
@@ -221,7 +235,10 @@ export function openApp(id, opts = {}) {
 
 export function closeApp(id) {
   const el = document.getElementById(`win-${id}`);
-  if (el) el.remove();
+  if (el) {
+    el.remove();
+    play("close");
+  }
   const i = openOrder.indexOf(id);
   if (i >= 0) openOrder.splice(i, 1);
   paintTaskbar();
@@ -238,6 +255,7 @@ export function minimizeApp(id) {
 }
 
 export function focusApp(id) {
+  clearFlash(id);
   document.querySelectorAll("#windows .window").forEach((w) => {
     const tb = w.querySelector(".title-bar");
     if (!tb) return;
@@ -280,7 +298,8 @@ export function paintTaskbar() {
       const def = registry.get(id);
       const el = document.getElementById(`win-${id}`);
       const active = el && !el.classList.contains("minimized") && openOrder[openOrder.length - 1] === id;
-      return `<button type="button" class="task-btn${active ? " active" : ""}" data-task="${id}">${escapeHtml(
+      const flash = flashing.has(id) && !active;
+      return `<button type="button" class="task-btn${active ? " active" : ""}${flash ? " flash" : ""}" data-task="${id}">${escapeHtml(
         (def && def.title) || id
       )}</button>`;
     })
@@ -301,6 +320,20 @@ export function escapeHtml(s) {
 }
 
 export function bindShell() {
+  bindAudio();
+  paintMuteButton();
+  document.getElementById("vol")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (isMuted()) {
+      toggleMuted();
+      paintMuteButton();
+      play("click");
+    } else {
+      play("click");
+      toggleMuted();
+      paintMuteButton();
+    }
+  });
   syncShellClass();
   const mq = window.matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)");
   mq.addEventListener?.("change", () => {
@@ -351,6 +384,7 @@ export function bindShell() {
     const start = e.target.closest("#start-btn");
     if (start) {
       toggleStart();
+      play("menu");
       return;
     }
     if (!e.target.closest("#start-menu") && !e.target.closest("#start-btn")) {
@@ -404,11 +438,13 @@ function renderStartMenu() {
   menu.querySelectorAll("[data-start-app]").forEach((b) => {
     b.addEventListener("click", () => {
       hideStart();
+      play("click");
       openApp(b.getAttribute("data-start-app"));
     });
   });
   menu.querySelector("[data-shutdown]").addEventListener("click", () => {
     hideStart();
+    play("question");
     emit("shutdown-request");
   });
 }

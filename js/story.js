@@ -257,6 +257,7 @@ export const FILES = {
     name: "lastnight.txt",
     opened: "lastnight",
   },
+  "C:\\My Documents\\invite.txt": { type: "text", name: "invite.txt", opened: "invite" },
   "C:\\My Documents\\passwords.txt": { type: "text", name: "passwords.txt", opened: "passwords" },
   "C:\\My Documents\\TellTaleHeart.doc": { type: "text", name: "TellTaleHeart.doc", opened: "essay" },
   "C:\\My Documents\\SLUMBER.NFO": { type: "text", name: "SLUMBER.NFO", opened: "nfo" },

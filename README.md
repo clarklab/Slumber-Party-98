@@ -16,6 +16,10 @@ python3 -m http.server 8080
 
 Then visit `http://localhost:8080`.
 
+## Host
+
+Static files. On Netlify: empty build command, publish directory `.`, HTTPS on. Custom domain `slumberparty.superfun.games` is a CNAME to the site's `*.netlify.app` hostname.
+
 ## How it works
 
 The party only makes sense as a roll of film:
@@ -33,5 +37,7 @@ The party only makes sense as a roll of film:
 Chat, Millhaven news, Encyclopedia Tropicana, the file explorer, and ScratchPad all point at that roll. The ending does not fork. The pictures do not care what you answer.
 
 The boot intro is a CP437/ANSI **SLUMBER PARTY 98** mark (also in `C:\My Documents\SLUMBER.NFO`). The Open Graph card is Lauren's pizza-party print with pink marker: *What happened at slumber party 98?* (`img/og-image.png`, 1200×630).
+
+Sounds are synthesized in the browser (Web Audio) — 98-style blips, not Microsoft `.wav` files. Tray speaker mutes them.
 
 Styled with [98.css](https://jdan.github.io/98.css/).
