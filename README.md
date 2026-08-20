@@ -4,6 +4,8 @@ A phone-first HomeSoft 98 horror story. You are Sarah Quinn, Sunday morning, Oct
 
 ## Play
 
+Live: [slumberparty.superfun.games](https://slumberparty.superfun.games/)
+
 Open `index.html` on a phone (or any browser). Add **HomeSoft 98** to your home screen so it runs full screen.
 
 Or, from this folder:
