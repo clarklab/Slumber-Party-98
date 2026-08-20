@@ -1,4 +1,4 @@
-const CACHE = "hs98-v1";
+const CACHE = "hs98-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -12,6 +12,8 @@ const ASSETS = [
   "./js/story.js",
   "./js/chats.js",
   "./js/icons.js",
+  "./js/ascii.js",
+  "./img/og-image.png",
   "./img/wallpaper.jpg",
   "./img/photo-pizza.jpg",
   "./img/photo-movie.jpg",

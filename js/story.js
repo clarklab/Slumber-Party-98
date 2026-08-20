@@ -1,5 +1,7 @@
 /** Photos, files, news, wiki — the night reconstructed on disk. */
 
+import { ASCII_INTRO } from "./ascii.js";
+
 export const PHOTOS = {
   pizza: {
     id: "pizza",
@@ -257,7 +259,7 @@ export const FILES = {
   },
   "C:\\My Documents\\passwords.txt": { type: "text", name: "passwords.txt", opened: "passwords" },
   "C:\\My Documents\\TellTaleHeart.doc": { type: "text", name: "TellTaleHeart.doc", opened: "essay" },
-  "C:\\My Documents\\invite.txt": { type: "text", name: "invite.txt", opened: "invite" },
+  "C:\\My Documents\\SLUMBER.NFO": { type: "text", name: "SLUMBER.NFO", opened: "nfo" },
   "C:\\My Pictures": { type: "folder", name: "My Pictures" },
   "C:\\My Pictures\\PartyRoll": { type: "folder", name: "PartyRoll" },
   "C:\\My Pictures\\PartyRoll\\INDEX.TXT": { type: "text", name: "INDEX.TXT", opened: "index" },
@@ -398,6 +400,12 @@ mandy looked at sarah like she'd won
 
 we put the board under the pizza boxes so mom wouldn't see it in a picture
 too late, lo already took IMG_007`,
+  },
+  nfo: {
+    title: "SLUMBER.NFO",
+    body:
+      ASCII_INTRO +
+      "\n\n[this file is the intro. it is also the warning.]\n",
   },
 };
 

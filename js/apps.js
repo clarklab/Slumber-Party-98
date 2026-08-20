@@ -689,6 +689,7 @@ function registerNotepad() {
     state.notepadDocs.invite = TEXTS.invite.body;
     state.notepadDocs.index = TEXTS.index.body;
     state.notepadDocs.draft = TEXTS.draft.body;
+    state.notepadDocs.nfo = TEXTS.nfo.body;
   }
   registerApp({
     id: "notepad",
@@ -711,6 +712,7 @@ function registerNotepad() {
         ["draft", "draft_to_mandy.txt"],
         ["essay", "TellTaleHeart.doc"],
         ["invite", "invite.txt"],
+        ["nfo", "SLUMBER.NFO"],
         ["passwords", "passwords.txt"],
       ];
       setTitle("notepad", `${files.find((f) => f[0] === doc)?.[1] || "Untitled"} — ScratchPad`);

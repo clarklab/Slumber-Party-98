@@ -400,6 +400,49 @@ img { -webkit-user-drag: none; }
 .boot-mark .edition { color: #ffd200; margin: 4px 0 24px; }
 .boot-bar { width: 100%; }
 
+.ascii-scrim {
+  background: #000 !important;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 6px calc(18px + var(--safe-b));
+  gap: 12px;
+}
+.ascii-wrap {
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+.ascii-intro {
+  margin: 0;
+  font-family: "Lucida Console", "DejaVu Sans Mono", "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.08;
+  white-space: pre;
+  transform-origin: top center;
+  text-shadow: 2px 2px 0 #001010;
+}
+@media (min-width: 720px) {
+  .ascii-intro { font-size: 14px; }
+}
+.ascii-intro .a-cyan { color: #55ffff; }
+.ascii-intro .a-mag { color: #ff55ff; }
+.ascii-intro .a-gold { color: #ffff55; }
+.ascii-intro .a-yel { color: #ffff55; }
+.ascii-intro .a-green { color: #55ff55; }
+.ascii-intro .a-red { color: #ff5555; }
+.ascii-intro .a-dim { color: #aaaaaa; }
+.ascii-hint {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #ffff55;
+  font-family: "Lucida Console", monospace;
+  font-size: 14px;
+  min-height: var(--thumb);
+}
+
 .login-card { width: min(360px, 100%); }
 .login-card .field-row-stacked { margin-bottom: 8px; }
 .login-card input { min-height: 36px; font-size: 16px; }

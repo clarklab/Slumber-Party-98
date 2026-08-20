@@ -30,4 +30,6 @@ The party only makes sense as a roll of film:
 
 Chat, Millhaven news, Encyclopedia Tropicana, the file explorer, and ScratchPad all point at that roll. The ending does not fork. The pictures do not care what you answer.
 
+The boot intro is a CP437/ANSI **SLUMBER PARTY 98** mark — same art as `img/og-image.png` (1200×630 Open Graph) and `C:\My Documents\SLUMBER.NFO`.
+
 Styled with [98.css](https://jdan.github.io/98.css/).

@@ -9,6 +9,7 @@ import {
 } from "./engine.js";
 import { bindShell, hideStart, paintClock } from "./wm.js";
 import { registerApps, paintDesktop, injectNode, viewPhoto } from "./apps.js";
+import { asciiIntroHtml } from "./ascii.js";
 import { BUDDIES } from "./story.js";
 
 let deferredPrompt = null;
@@ -102,6 +103,7 @@ function showWizard() {
 }
 
 async function runBootThenLogin() {
+  await showAsciiIntro();
   showOverlay(`
     <div class="scrim navy">
       <div class="boot-mark">
@@ -119,6 +121,42 @@ async function runBootThenLogin() {
     bar.value = v;
   }
   showLogin();
+}
+
+function showAsciiIntro() {
+  showOverlay(`
+    <div class="scrim ascii-scrim" id="ascii-scrim">
+      <div class="ascii-wrap">
+        <pre class="ascii-intro">${asciiIntroHtml()}</pre>
+      </div>
+      <button type="button" class="ascii-hint blink" id="ascii-go">tap to log on_</button>
+    </div>`);
+  playChord("start");
+  return new Promise((resolve) => {
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      resolve();
+    };
+    overlay().addEventListener("click", go);
+    setTimeout(go, 5200);
+    requestAnimationFrame(fitAscii);
+    window.addEventListener("resize", fitAscii);
+  });
+}
+
+function fitAscii() {
+  const wrap = document.querySelector(".ascii-wrap");
+  const pre = document.querySelector(".ascii-intro");
+  if (!wrap || !pre) return;
+  pre.style.transform = "none";
+  pre.style.marginLeft = "0";
+  const scale = Math.min(1, (wrap.clientWidth - 8) / Math.max(1, pre.scrollWidth));
+  pre.style.transformOrigin = "top left";
+  pre.style.transform = `scale(${scale})`;
+  pre.style.marginLeft = `${Math.max(0, (wrap.clientWidth - pre.scrollWidth * scale) / 2)}px`;
+  wrap.style.height = `${Math.ceil(pre.scrollHeight * scale)}px`;
 }
 
 function showLogin() {
