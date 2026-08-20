@@ -15,11 +15,12 @@ import {
   markUnread,
   clueCount,
 } from "./engine.js";
-import { openApp, setTitle, escapeHtml, refreshApp, isOpen, registerApp, getApp } from "./wm.js";
+import { openApp, setTitle, escapeHtml, refreshApp, isOpen, registerApp, getApp, flashTask } from "./wm.js";
 import { img } from "./icons.js";
 import { PHOTOS, PARTY_ROLL, BUDDIES, FILES, TEXTS, WIKI, wikiBody, parseRich, escapeText } from "./story.js";
 import { CHATS } from "./chats.js";
 import { isDesktopShell } from "./engine.js";
+import { play } from "./audio.js";
 
 export function openLink(ref) {
   const [kind, id] = String(ref).split(":");
@@ -58,6 +59,7 @@ export function viewPhoto(id, extra = {}) {
     openApp("photo", { id: "leaving" });
     return;
   }
+  if (state.currentPhoto !== id) play("shutter");
   state.currentPhoto = id;
   setFlag("saw_" + id);
   if (p.roll || id === "creek" || id === "mandy") {
@@ -132,6 +134,7 @@ export function registerApps() {
     const id = b.getAttribute("data-open");
     if (id === "recycle") {
       state.explorerPath = "C:\\Recycle Bin";
+      play("recycle");
       openApp("explorer");
     } else if (id === "computer") {
       state.explorerPath = "C:\\";
@@ -264,12 +267,7 @@ function renderChat(body, buddyId) {
       <div class="choices" id="chat-choices"></div>
       <div class="status-bar"><p class="status-bar-field">${escapeHtml(b.profile)}</p></div>
     </div>`;
-  body.querySelector("[data-back-buddies]").addEventListener("click", () => {
-    state.currentBuddy = null;
-    const root = document.getElementById("body-messenger");
-    if (isDesktopShell() && root?.querySelector("#im-side")) renderMessengerDesktop(root);
-    else renderBuddyList(root || body);
-  });
+  body.querySelector("[data-back-buddies]").addEventListener("click", () => goBuddyList(body));
   bindLinks(body);
   const logEl = body.querySelector("#chat-log");
   chat.log.forEach((m) => appendMsg(logEl, m));
@@ -313,7 +311,11 @@ async function playNode(body, buddyId, nodeId) {
     chat.log.push(m);
     appendMsg(logEl, m);
     logEl.scrollTop = logEl.scrollHeight;
-    if (m.from !== "sarah" && m.from !== "sys") playBeep();
+    if (m.from === "sys") {
+      const t = String(m.text).toLowerCase();
+      if (t.includes("signed on")) play("signon");
+      else if (t.includes("signed off")) play("signoff");
+    } else if (m.from !== "sarah") playBeep();
     if (m.photo) {
       /* thumb already in message */
     }
@@ -331,10 +333,7 @@ function showChoices(body, buddyId, nodeId) {
   const choices = node.choices || [];
   if (!choices.length) {
     choiceEl.innerHTML = `<button type="button" data-back-buddies>Back to Buddy List</button>`;
-    choiceEl.querySelector("[data-back-buddies]")?.addEventListener("click", () => {
-      state.currentBuddy = null;
-      renderBuddyList(body);
-    });
+    choiceEl.querySelector("[data-back-buddies]")?.addEventListener("click", () => goBuddyList(body));
     return;
   }
   choiceEl.innerHTML = choices
@@ -343,6 +342,7 @@ function showChoices(body, buddyId, nodeId) {
   choiceEl.querySelectorAll("[data-choice]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const c = choices[Number(btn.getAttribute("data-choice"))];
+      play("send");
       (c.flags || []).forEach((f) => setFlag(f));
       if (c.notes) pinNote(c.notes);
       const chat = ensureChat(buddyId);
@@ -389,14 +389,90 @@ function appendMsg(logEl, m) {
   logEl.appendChild(wrap);
 }
 
+function goBuddyList(fromEl) {
+  state.currentBuddy = null;
+  const root = document.getElementById("body-messenger");
+  if (isDesktopShell() && root?.querySelector("#im-side")) renderMessengerDesktop(root);
+  else renderBuddyList(root || fromEl);
+}
+
+const balloonQ = [];
+let balloonTimer = 0;
+
+function stripImText(text) {
+  return String(text || "")
+    .replace(/\[\[[^\|\]]*\|([^\]]+)\]\]/g, "$1")
+    .replace(/\[\[[^\]]+\]\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 90);
+}
+
+export function showImAlert(buddyId, nodeId) {
+  const b = BUDDIES[buddyId];
+  const node = CHATS[buddyId]?.[nodeId];
+  const msgs = node?.messages || [];
+  const raw = msgs.find((m) => m.from !== "sys") || msgs[0];
+  balloonQ.push({
+    buddyId,
+    sn: b?.sn || buddyId,
+    color: b?.color || "#000080",
+    body: stripImText(raw?.text) || "Instant Message",
+  });
+  if (balloonQ.length === 1) paintBalloon();
+}
+
+function paintBalloon() {
+  const host = document.getElementById("balloon-root");
+  if (!host) return;
+  clearTimeout(balloonTimer);
+  const item = balloonQ[0];
+  if (!item) {
+    host.innerHTML = "";
+    return;
+  }
+  host.innerHTML = `
+    <button type="button" class="balloon" id="im-balloon">
+      <span class="balloon-app">${img("messenger")} Instant Message</span>
+      <b class="balloon-sn" style="color:${item.color}">${escapeHtml(item.sn)}</b>
+      <span class="balloon-body">${escapeHtml(item.body)}</span>
+    </button>`;
+  host.querySelector("#im-balloon").addEventListener("click", () => {
+    balloonQ.shift();
+    openApp("messenger", { buddy: item.buddyId });
+    paintBalloon();
+  });
+  balloonTimer = setTimeout(() => {
+    balloonQ.shift();
+    paintBalloon();
+  }, 7000);
+}
+
+function paintDocTitle() {
+  const n = Object.values(state.unread).reduce((a, b) => a + b, 0);
+  document.title = n ? `(${n}) Instant Message` : "Slumber Party 98";
+  document.getElementById("modem")?.classList.toggle("tray-blink", n > 0);
+}
+
 export function injectNode(buddyId, nodeId) {
+  const node = CHATS[buddyId]?.[nodeId];
+  if (node) {
+    (node.flags || []).forEach((f) => setFlag(f));
+    (node.clues || []).forEach((c) => addClue(c.id, c.note));
+  }
   const chat = ensureChat(buddyId);
   chat.seenStart = true;
   chat.node = nodeId;
   chat.pendingNode = nodeId;
-  markUnread(buddyId, 1);
+  const watching = isOpen("messenger") && state.currentBuddy === buddyId;
+  if (!watching) {
+    markUnread(buddyId, 1);
+    if (nodeId === "ghost") play("signon");
+    play("im");
+    flashTask("messenger");
+    showImAlert(buddyId, nodeId);
+  }
   paintDesktop();
-  playBeep();
   const body = document.getElementById("body-messenger");
   if (!isOpen("messenger") || !body) {
     emit("im", { buddyId, nodeId });
@@ -458,6 +534,7 @@ function registerBrowser() {
           state.browserUrl = b.getAttribute("data-nav");
           setFlag("read_news");
           addClue("read_news", "You checked Millhaven Online.");
+          play("navigate");
           registerBrowserRender(body);
         })
       );
@@ -490,6 +567,7 @@ function goAddr(body) {
   else state.browserUrl = "home";
   setFlag("read_news");
   addClue("read_news", "You went looking on Millhaven Online.");
+  play("navigate");
   registerBrowserRender(body);
 }
 
@@ -785,7 +863,7 @@ function registerNotepad() {
       body.querySelectorAll("[data-doc]").forEach((b) =>
         b.addEventListener("click", () => {
           state.notepadDoc = b.getAttribute("data-doc");
-          if (["lastnight", "draft", "passwords", "letters", "index"].includes(state.notepadDoc)) {
+          if (["lastnight", "draft", "passwords", "letters", "index", "invite", "nfo"].includes(state.notepadDoc)) {
             setFlag("read_file");
             addClue("read_file", `Opened ${state.notepadDoc}`);
           }
@@ -877,7 +955,10 @@ function registerDos() {
           setFlag("read_file");
           addClue("read_file", "DOS still had lastnight.txt.");
         } else if (c === "remember") println("you looked at the flash.\nyou decided not to wave.");
-        else println("Bad command or file name");
+        else {
+          play("error");
+          println("Bad command or file name");
+        }
       });
     },
   });
@@ -892,7 +973,7 @@ function registerHelp() {
       body.innerHTML = `<div class="app-scroll web-98">
         <h1>What to do when you don't know what happened</h1>
         <p>1. Open <b>BuddyBee</b>. People will send pictures. Click the pictures. The night only makes sense in order.</p>
-        <p>2. The order is pizza → movie → sleeping bags → mom in the doorway → the window → the board → maple street.</p>
+        <p>2. The order is pizza → movie → sleeping bags → mom in the doorway → after she left → the window → the board → maple street.</p>
         <p>3. Lauren has a frame she is not sending yet. It is not from the party.</p>
         <p>4. Write it in <b>ScratchPad</b> or it will rearrange itself.</p>
         <p>5. Encyclopedia Tropicana is for when you want a dead girl in 1978 to be the explanation.</p>
@@ -904,7 +985,10 @@ function registerHelp() {
   });
 }
 
-on("unread", paintDesktop);
+on("unread", () => {
+  paintDesktop();
+  paintDocTitle();
+});
 on("climax", paintDesktop);
 on("notes", () => {
   if (state.notepadDoc === "scratch") state.notepadDocs.scratch = state.notes;

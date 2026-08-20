@@ -106,7 +106,7 @@ export const CHATS = {
       messages: [
         { from: "jess", text: "i'm sitting in the kitchen with the pizza boxes still out. it smells like last night. it shouldn't still smell like last night." },
         { from: "jess", text: "IM me the second anybody says they saw you after maple." },
-        { from: "jess", text: "and look at the pictures in order if you haven't. pizza. movie. bags. mom. window. board. leaving. that's the party. that's all of us being stupid." },
+        { from: "jess", text: "and look at the pictures in order if you haven't. pizza. movie. bags. mom. after she left. window. board. leaving. that's the party. that's all of us being stupid." },
         { from: "jess", text: "i keep looking at IMG_001 like i can put her back in the basement" },
       ],
       choices: [
@@ -213,12 +213,25 @@ export const CHATS = {
         { from: "lauren", text: "9:36. i shouldn't have used the flash on the stairs." },
         { from: "lauren", photo: "mom", text: "[[photo:mom|IMG_004 — Mrs. Hart]] her eyes went white. chloe screamed for real. then she turned it into a joke. diane said be good, eleven, wedding, toledo." },
         { from: "lauren", text: "garage at 9:47. i didn't photograph the garage. i wish i photographed the garage. that's the last grown-up." },
-        { from: "lauren", text: "after this picture there is no mom. there's a window. there's a board. there's you and mandy on maple." },
+        { from: "lauren", text: "after this picture there is no mom. i took one more of the room first. then the window. then the board. then you and mandy on maple." },
         { from: "lauren", text: "chloe said the eyes looked like a spirit. i said it's called red-eye you dork. this morning i don't know." },
       ],
       choices: [
+        { text: "then what. before tyler.", next: "basement" },
+        { text: "the eyes are just the flash.", next: "basement" },
+      ],
+    },
+    basement: {
+      flags: ["saw_roll_basement"],
+      clues: [{ id: "after_mom", note: "IMG_005, 9:51pm: after mom left. Window still empty. Two minutes of no adult." }],
+      messages: [
+        { from: "lauren", text: "9:51. two minutes of no adult. i took it because the room felt illegal." },
+        { from: "lauren", photo: "basement", text: "[[photo:basement|IMG_005 — after]] nail polish. lava lamp. the window behind chloe still empty. we look like we got away with something." },
+        { from: "lauren", text: "then we heard the tap." },
+      ],
+      choices: [
         { text: "then tyler came.", next: "window" },
-        { text: "the eyes are just the flash.", next: "window" },
+        { text: "keep going.", next: "window" },
       ],
     },
     window: {
@@ -596,13 +609,3 @@ export const CHATS = {
     },
   },
 };
-
-export const INJECTS = [
-  {
-    id: "tyler_unlock",
-    ifAny: ["asked_tyler_jess", "read_file"],
-    run(state) {
-      state.flags.tyler_unlocked = true;
-    },
-  },
-];
