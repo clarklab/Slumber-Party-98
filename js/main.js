@@ -10,6 +10,7 @@ import {
 } from "./engine.js";
 import { bindShell, hideStart, paintClock } from "./wm.js";
 import { registerApps, paintDesktop, injectNode, viewPhoto, showImAlert } from "./apps.js";
+import { startPopups } from "./popups.js";
 import { showSetupWizard } from "./setup.js";
 import { asciiIntroHtml } from "./ascii.js";
 import { BUDDIES } from "./story.js";
@@ -161,6 +162,7 @@ function enterDesktop() {
   document.getElementById("desktop").hidden = false;
   paintDesktop();
   markUnreadStart();
+  startPopups();
 }
 
 function markUnreadStart() {

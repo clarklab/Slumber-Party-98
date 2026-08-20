@@ -171,6 +171,13 @@ const BANK = {
     }
     osc("sawtooth", 1800, t + 0.38, 0.12, 0.06, 600);
   },
+  ring(t) {
+    for (let n = 0; n < 2; n++) {
+      const t0 = t + n * 0.95;
+      osc("sine", 440, t0, 0.42, 0.14);
+      osc("sine", 480, t0, 0.42, 0.12);
+    }
+  },
 };
 
 export function play(name) {

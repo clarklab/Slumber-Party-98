@@ -1208,3 +1208,189 @@ img { -webkit-user-drag: none; }
 @media (min-width: 720px) {
   .ascii-intro { font-size: 14px; }
 }
+
+/* 1998 popups + Dial-Up fights */
+#popup-root {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+}
+#popup-root:empty { display: none; }
+#popup-root:not(:empty) { pointer-events: auto; }
+.popup-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 10px calc(12px + var(--task-h) + var(--safe-b));
+}
+.popup-win {
+  width: min(400px, 100%);
+  max-height: calc(100dvh - var(--task-h) - 28px);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.popup-win .title-bar { min-height: 32px; }
+.popup-win .title-bar-controls button { min-width: 28px; min-height: 26px; }
+.popup-body {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.popup-body p { margin: 0 0 8px; }
+.popup-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid #808080;
+  box-shadow: inset 0 1px #fff;
+}
+.popup-foot button { min-height: var(--thumb); min-width: 90px; }
+.ad-fine { font-size: 11px; color: #000080; }
+
+.ad-pch { background: silver; }
+.pch-banner {
+  background: #c00;
+  color: #ff0;
+  font-weight: bold;
+  text-align: center;
+  padding: 6px;
+  font-size: 16px;
+  letter-spacing: 1px;
+  animation: pchflash 0.6s steps(2) infinite;
+}
+.pch-star {
+  text-align: center;
+  font-size: 42px;
+  color: #ffd200;
+  line-height: 1;
+  animation: pchspin 1.2s linear infinite;
+}
+.pch-vis { text-align: center; font-size: 16px; }
+@keyframes pchflash { 50% { background: #ff0; color: #c00; } }
+@keyframes pchspin { to { filter: hue-rotate(60deg); } }
+
+.ad-ool .ool-hero {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: linear-gradient(#000080, #1084d0);
+  color: #fff;
+  padding: 10px;
+  margin: -8px -8px 10px;
+}
+.ool-run {
+  width: 36px;
+  height: 36px;
+  background: #fff;
+  clip-path: polygon(20% 10%, 80% 10%, 100% 50%, 80% 90%, 20% 90%, 0 50%);
+  animation: oolrun 0.4s steps(2) infinite;
+}
+.ool-name { font-style: italic; font-weight: bold; font-size: 18px; }
+.ool-hours { color: #ffd200; font-weight: bold; }
+@keyframes oolrun { 50% { transform: translateX(4px); } }
+
+.ad-419 .s419-head {
+  background: #c0f;
+  color: #0f0;
+  font-weight: bold;
+  text-align: center;
+  padding: 6px;
+  margin: -8px -8px 8px;
+  font-size: 13px;
+}
+.s419-grid { display: grid; gap: 6px; margin-bottom: 8px; }
+.s419-card {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 0 8px;
+  background: #fff;
+  border: 1px solid #808080;
+  padding: 6px;
+  font-size: 12px;
+}
+.s419-card b { grid-column: 2; }
+.s419-card span { grid-column: 2; color: #000080; }
+.s419-pic {
+  grid-row: 1 / span 2;
+  width: 44px;
+  height: 44px;
+  background: #68c;
+  box-shadow: inset 1px 1px #fff, inset -1px -1px #000;
+}
+.s419-pic.chad { background: #864; }
+.s419-pic.brandy { background: #c69; }
+.s419-pic.kyle { background: #468; }
+
+.ad-luna { background: #1a0033; }
+.ad-luna .window-body { background: #2a0850; color: #f4e6ff; }
+.luna-stars {
+  height: 28px;
+  margin: -8px -8px 8px;
+  background:
+    radial-gradient(circle at 10% 40%, #fff 1px, transparent 2px),
+    radial-gradient(circle at 40% 20%, #fcf 1px, transparent 2px),
+    radial-gradient(circle at 70% 60%, #fff 1px, transparent 2px),
+    radial-gradient(circle at 90% 30%, #ffd200 1px, transparent 2px),
+    #120024;
+}
+.luna-hey {
+  color: #ffd200;
+  font-weight: bold;
+  text-align: center;
+  font-size: 15px;
+}
+.ad-luna .ad-fine { color: #c9a; }
+
+.phone-hero {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.phone-hero .glyph { width: 40px; height: 40px; flex: 0 0 40px; }
+.phone-title { font-weight: bold; font-size: 15px; margin: 0 0 6px; }
+.phone-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #000;
+  color: #0f0;
+  font-family: "Lucida Console", monospace;
+  font-size: 12px;
+  padding: 6px 8px;
+  margin: 8px 0;
+}
+.phone-status.warn { color: #ff0; }
+.modem-lights { display: flex; gap: 4px; }
+.modem-lights i {
+  width: 8px;
+  height: 8px;
+  background: #0c0;
+  box-shadow: 0 0 4px #0f0;
+  animation: mdm 0.8s steps(2) infinite;
+}
+.modem-lights i:nth-child(2) { animation-delay: 0.2s; background: #f00; box-shadow: 0 0 4px #f00; }
+.modem-lights i:nth-child(3) { animation-delay: 0.4s; background: #ffd200; box-shadow: 0 0 4px #ff0; }
+.modem-lights.panic i { animation-duration: 0.2s; }
+@keyframes mdm { 50% { opacity: 0.15; } }
+.phone-choices { display: flex; flex-direction: column; gap: 6px; }
+.phone-choices button {
+  width: 100%;
+  min-height: var(--thumb);
+  text-align: left;
+  white-space: normal;
+  font-size: 13px;
+  line-height: 1.25;
+  padding: 8px 10px;
+}
+
+.desktop-shell .popup-win { width: min(440px, calc(100vw - 48px)); }
+.desktop-shell .phone-choices button { min-height: 40px; }
+

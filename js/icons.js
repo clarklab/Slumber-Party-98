@@ -57,6 +57,9 @@ export const icons = {
   warning: svg(
     `<polygon points="24,4 46,42 2,42" fill="#ffd200" stroke="#000"/><text x="20" y="36" fill="#000" font-size="20" font-family="serif">!</text>`
   ),
+  phone: svg(
+    `<rect x="14" y="4" width="20" height="40" rx="3" fill="#c0c0c0" stroke="#000"/><rect x="17" y="8" width="14" height="10" fill="#9f9"/><circle cx="24" cy="28" r="5" fill="#800000" stroke="#000"/><rect x="20" y="36" width="8" height="3" fill="#000"/>`
+  ),
 };
 
 export function img(name, cls = "glyph") {
