@@ -260,16 +260,35 @@ img { -webkit-user-drag: none; }
 #windows .window {
   pointer-events: auto;
   position: absolute;
-  inset: 4px 4px 4px 4px;
   display: flex;
   flex-direction: column;
-  max-width: 100%;
-  width: auto !important;
   margin: 0;
+  inset: 4px;
+}
+
+.desktop-shell #windows .window {
+  inset: auto;
+  min-width: 320px;
+  min-height: 220px;
+}
+.desktop-shell #windows .window.maximized {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+.mobile-shell #windows .window {
+  inset: 4px !important;
+  width: auto !important;
+  height: auto !important;
 }
 
 #windows .window.minimized { display: none; }
 #windows .window.hidden-app { display: none; }
+#windows .window.dragging { user-select: none; }
 
 #windows .title-bar {
   min-height: 32px;
@@ -287,6 +306,24 @@ img { -webkit-user-drag: none; }
   min-width: 28px;
   min-height: 26px;
 }
+
+.rz {
+  display: none;
+  position: absolute;
+  z-index: 3;
+}
+.desktop-shell .window:not(.maximized) .rz { display: block; }
+.rz-n, .rz-s { left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.rz-e, .rz-w { top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.rz-n { top: 0; }
+.rz-s { bottom: 0; }
+.rz-e { right: 0; }
+.rz-w { left: 0; }
+.rz-ne, .rz-nw, .rz-se, .rz-sw { width: 10px; height: 10px; }
+.rz-ne { top: 0; right: 0; cursor: nesw-resize; }
+.rz-nw { top: 0; left: 0; cursor: nwse-resize; }
+.rz-se { bottom: 0; right: 0; cursor: nwse-resize; }
+.rz-sw { bottom: 0; left: 0; cursor: nesw-resize; }
 
 #windows .window-body {
   flex: 1;
@@ -1014,13 +1051,97 @@ img { -webkit-user-drag: none; }
 .photo-stage { position: relative; background: #000; }
 .caught .title-bar { background: #800000 !important; }
 
+.im-split {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.im-side {
+  width: 220px;
+  flex: 0 0 220px;
+  overflow: auto;
+  border-right: 1px solid #808080;
+  background: silver;
+}
+.im-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.im-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000080;
+  padding: 24px;
+  text-align: center;
+}
+
+.desktop-shell {
+  cursor: default;
+}
+.desktop-shell button,
+.desktop-shell a,
+.desktop-shell .desk-icon,
+.desktop-shell .file-ico,
+.desktop-shell .buddy,
+.desktop-shell .choices button,
+.desktop-shell [data-link],
+.desktop-shell .hs-ico {
+  cursor: pointer;
+}
+.desktop-shell .title-bar { cursor: move; }
+.desktop-shell .window.maximized .title-bar,
+.desktop-shell .title-bar-controls,
+.desktop-shell .title-bar-controls button {
+  cursor: default;
+}
+.desktop-shell .title-bar-controls button { cursor: pointer; }
+.desktop-shell textarea,
+.desktop-shell input[type="text"],
+.desktop-shell input[type="password"],
+.desktop-shell .chat-log,
+.desktop-shell .tropi-article,
+.desktop-shell .web-98 {
+  cursor: text;
+}
+
+.desktop-shell #icon-grid {
+  right: auto;
+  width: 104px;
+  overflow: visible;
+  grid-template-columns: 92px;
+}
+.desktop-shell #start-menu { width: 320px; }
+.desktop-shell .task-btn { max-width: 220px; flex: 0 1 160px; }
+
+.desktop-shell .setup-scrim {
+  justify-content: center;
+  align-items: center;
+  padding-bottom: calc(56px + var(--safe-b));
+}
+.desktop-shell .wizard97 {
+  width: min(620px, calc(100vw - 48px));
+  margin: 0;
+  max-height: min(640px, calc(100dvh - 90px));
+}
+.desktop-shell .wizard97-side {
+  width: 120px;
+  flex-basis: 120px;
+}
+.desktop-shell .login-card { width: 380px; }
+
+.desktop-shell .tropi-nav { max-width: 220px; width: 200px; }
+.desktop-shell .expl-tree { max-width: 200px; width: 38%; }
+
+.desktop-shell .choices button,
+.desktop-shell .wizard97-footer button,
+.desktop-shell .buddy {
+  min-height: 36px;
+}
+
 @media (min-width: 720px) {
-  #windows .window {
-    inset: 18px 18px 18px 18px;
-    max-width: 520px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(520px, calc(100% - 36px)) !important;
-    right: auto;
-  }
+  .ascii-intro { font-size: 14px; }
 }

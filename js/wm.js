@@ -1,8 +1,20 @@
-import { state, emit, on, dateStr } from "./engine.js";
+import { state, emit, on, dateStr, isDesktopShell, syncShellClass } from "./engine.js";
 import { icons } from "./icons.js";
 
 const registry = new Map();
 const openOrder = [];
+const SIZES = {
+  messenger: [760, 540],
+  browser: [840, 600],
+  tropicana: [780, 560],
+  explorer: [700, 520],
+  computer: [700, 520],
+  notepad: [560, 440],
+  photo: [600, 580],
+  dos: [600, 400],
+  help: [520, 440],
+};
+let cascade = 0;
 
 export function registerApp(def) {
   registry.set(def.id, def);
@@ -16,12 +28,155 @@ export function apps() {
   return [...registry.values()];
 }
 
+function windowsEl() {
+  return document.getElementById("windows");
+}
+
+function areaSize() {
+  const el = windowsEl();
+  return { w: el?.clientWidth || window.innerWidth, h: el?.clientHeight || window.innerHeight };
+}
+
+function nextGeom(id) {
+  const [dw, dh] = SIZES[id] || [560, 420];
+  const { w: aw, h: ah } = areaSize();
+  const width = Math.min(dw, Math.max(320, aw - 24));
+  const height = Math.min(dh, Math.max(240, ah - 24));
+  const step = (cascade++ % 8) * 26;
+  const x = Math.min(32 + step, Math.max(0, aw - width - 8));
+  const y = Math.min(28 + step, Math.max(0, ah - height - 8));
+  return { x, y, width, height };
+}
+
+function applyGeom(el, g) {
+  el.style.left = `${g.x}px`;
+  el.style.top = `${g.y}px`;
+  el.style.width = `${g.width}px`;
+  el.style.height = `${g.height}px`;
+  el.style.right = "auto";
+  el.style.bottom = "auto";
+  el.style.inset = "auto";
+}
+
+function currentGeom(el) {
+  return {
+    x: el.offsetLeft,
+    y: el.offsetTop,
+    width: el.offsetWidth,
+    height: el.offsetHeight,
+  };
+}
+
+function setMaxButton(el, id, maximized) {
+  const btn = el.querySelector("[data-max], [data-restore]");
+  if (!btn) return;
+  if (maximized) {
+    btn.setAttribute("aria-label", "Restore");
+    btn.className = "restore";
+    btn.dataset.restore = id;
+    delete btn.dataset.max;
+  } else {
+    btn.setAttribute("aria-label", "Maximize");
+    btn.className = "maximize";
+    btn.dataset.max = id;
+    delete btn.dataset.restore;
+  }
+}
+
+export function toggleMaximize(id) {
+  if (!isDesktopShell()) return;
+  const el = document.getElementById(`win-${id}`);
+  if (!el) return;
+  if (el.classList.contains("maximized")) {
+    const g = JSON.parse(el.dataset.geom || "null") || nextGeom(id);
+    el.classList.remove("maximized");
+    applyGeom(el, g);
+    setMaxButton(el, id, false);
+  } else {
+    el.dataset.geom = JSON.stringify(currentGeom(el));
+    el.classList.add("maximized");
+    setMaxButton(el, id, true);
+  }
+  focusApp(id);
+}
+
+function bindWindowChrome(el, id) {
+  const bar = el.querySelector(".title-bar");
+  bar.addEventListener("dblclick", (e) => {
+    if (e.target.closest(".title-bar-controls")) return;
+    toggleMaximize(id);
+  });
+  bar.addEventListener("pointerdown", (e) => {
+    if (!isDesktopShell() || el.classList.contains("maximized")) return;
+    if (e.target.closest(".title-bar-controls")) return;
+    if (e.button != null && e.button !== 0) return;
+    focusApp(id);
+    e.preventDefault();
+    const sx = e.clientX;
+    const sy = e.clientY;
+    const orig = currentGeom(el);
+    el.classList.add("dragging");
+    const move = (ev) => {
+      applyGeom(el, {
+        x: orig.x + ev.clientX - sx,
+        y: Math.max(0, orig.y + ev.clientY - sy),
+        width: orig.width,
+        height: orig.height,
+      });
+    };
+    const up = () => {
+      el.classList.remove("dragging");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+  el.querySelectorAll("[data-rz]").forEach((h) => {
+    h.addEventListener("pointerdown", (e) => {
+      if (!isDesktopShell() || el.classList.contains("maximized")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      focusApp(id);
+      const dir = h.getAttribute("data-rz");
+      const sx = e.clientX;
+      const sy = e.clientY;
+      const orig = currentGeom(el);
+      const move = (ev) => {
+        const dx = ev.clientX - sx;
+        const dy = ev.clientY - sy;
+        let { x, y, width, height } = orig;
+        if (dir.includes("e")) width = orig.width + dx;
+        if (dir.includes("s")) height = orig.height + dy;
+        if (dir.includes("w")) {
+          width = orig.width - dx;
+          x = orig.x + dx;
+        }
+        if (dir.includes("n")) {
+          height = orig.height - dy;
+          y = orig.y + dy;
+        }
+        width = Math.max(320, width);
+        height = Math.max(220, height);
+        applyGeom(el, { x, y, width, height });
+      };
+      const up = () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    });
+  });
+}
+
 export function openApp(id, opts = {}) {
   const def = registry.get(id);
   if (!def) return;
   if (!state.firstApp) state.firstApp = id;
-  const wins = document.getElementById("windows");
+  const wins = windowsEl();
   let el = document.getElementById(`win-${id}`);
+  const desk = isDesktopShell();
   if (!el) {
     el = document.createElement("div");
     el.className = "window";
@@ -31,11 +186,19 @@ export function openApp(id, opts = {}) {
         <div class="title-bar-text" id="title-${id}">${escapeHtml(def.title)}</div>
         <div class="title-bar-controls">
           <button aria-label="Minimize" data-min="${id}"></button>
-          <button aria-label="Maximize" disabled></button>
+          <button aria-label="Maximize" class="maximize" data-max="${id}"></button>
           <button aria-label="Close" data-close="${id}"></button>
         </div>
       </div>
       <div class="window-body" id="body-${id}"></div>
+      <div class="rz rz-n" data-rz="n"></div>
+      <div class="rz rz-s" data-rz="s"></div>
+      <div class="rz rz-e" data-rz="e"></div>
+      <div class="rz rz-w" data-rz="w"></div>
+      <div class="rz rz-ne" data-rz="ne"></div>
+      <div class="rz rz-nw" data-rz="nw"></div>
+      <div class="rz rz-se" data-rz="se"></div>
+      <div class="rz rz-sw" data-rz="sw"></div>
     `;
     const titleText = el.querySelector(".title-bar-text");
     if (def.icon && icons[def.icon]) {
@@ -44,8 +207,12 @@ export function openApp(id, opts = {}) {
     wins.appendChild(el);
     el.addEventListener("mousedown", () => focusApp(id));
     el.addEventListener("touchstart", () => focusApp(id), { passive: true });
+    bindWindowChrome(el, id);
+    if (desk) applyGeom(el, nextGeom(id));
+    else el.classList.add("maximized");
   }
   el.classList.remove("minimized");
+  if (desk && !el.style.width) applyGeom(el, nextGeom(id));
   focusApp(id);
   def.render(document.getElementById(`body-${id}`), opts);
   paintTaskbar();
@@ -134,6 +301,21 @@ export function escapeHtml(s) {
 }
 
 export function bindShell() {
+  syncShellClass();
+  const mq = window.matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)");
+  mq.addEventListener?.("change", () => {
+    syncShellClass();
+    document.querySelectorAll("#windows .window").forEach((el) => {
+      const id = el.id.replace("win-", "");
+      if (isDesktopShell()) {
+        if (!el.style.width) applyGeom(el, nextGeom(id));
+        el.classList.remove("maximized");
+        setMaxButton(el, id, false);
+      } else {
+        el.classList.add("maximized");
+      }
+    });
+  });
   document.body.addEventListener("click", (e) => {
     const close = e.target.closest("[data-close]");
     if (close) {
@@ -143,6 +325,16 @@ export function bindShell() {
     const min = e.target.closest("[data-min]");
     if (min) {
       minimizeApp(min.getAttribute("data-min"));
+      return;
+    }
+    const max = e.target.closest("[data-max]");
+    if (max) {
+      toggleMaximize(max.getAttribute("data-max"));
+      return;
+    }
+    const restore = e.target.closest("[data-restore]");
+    if (restore) {
+      toggleMaximize(restore.getAttribute("data-restore"));
       return;
     }
     const task = e.target.closest("[data-task]");

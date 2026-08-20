@@ -61,6 +61,10 @@ export function showSetupWizard({ root, onComplete, getPrompt, consumePrompt }) 
     }
     if (st.step === STEPS.length - 1) {
       sessionStorage.setItem("hs98-installed", "1");
+      const fs = root.querySelector("#go-fs");
+      if (fs && fs.checked && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
       onComplete();
       return;
     }
@@ -193,7 +197,8 @@ const STEPS = [
       if (plat.android) return androidHtml(st);
       return desktopHtml(st);
     },
-    canNext(st) {
+    canNext(st, plat) {
+      if (plat.desktop) return true;
       return st.shortcutOk || isStandalone();
     },
   },
@@ -217,10 +222,14 @@ const STEPS = [
   {
     id: "done",
     task: "Setup Complete",
-    html() {
+    html(_st, plat) {
       return `
         <h2>Setup is complete</h2>
-        <p>HomeSoft 98 is installed. A shortcut named <b>HomeSoft 98</b> is on your Home Screen.</p>
+        <p>${
+          plat.desktop
+            ? "HomeSoft 98 will fill this window. Drag title bars, resize from the edges, use the taskbar."
+            : "A shortcut named <b>HomeSoft 98</b> belongs on your Home Screen."
+        }</p>
         <div class="sunken-panel homescreen-preview">
           ${previewIcons(true)}
         </div>
@@ -235,7 +244,14 @@ const STEPS = [
             <label for="r2">I will restart later (do not choose this)</label>
           </div>
         </fieldset>
-        <p>If you added the shortcut, close this browser and tap <b>HomeSoft 98</b> on the Home Screen. Otherwise click Finish to start in this window.</p>`;
+        ${
+          plat.desktop
+            ? `<div class="field-row">
+          <input type="checkbox" id="go-fs" />
+          <label for="go-fs">Open full screen</label>
+        </div>`
+            : `<p>If you created the shortcut, close this browser and tap <b>HomeSoft 98</b>. Otherwise Finish starts in this window.</p>`
+        }`;
     },
   },
 ];
@@ -308,16 +324,12 @@ function androidHtml() {
 
 function desktopHtml() {
   return `
-    <h2>Create Shortcut</h2>
-    <p>On a phone, Setup puts this computer on the Home Screen. On this PC you can install it as an application, or continue in the window (not recommended).</p>
+    <h2>This PC</h2>
+    <p>You're on a computer. HomeSoft 98 will fill this window. You can drag, resize, and overlap programs with the mouse. On a phone you'd put a shortcut on the Home Screen first.</p>
     <div class="field-row">
-      <button type="button" class="default" id="do-install">${img("shortcut")} Create Shortcut</button>
+      <button type="button" class="default" id="do-install">${img("shortcut")} Install app (optional)</button>
     </div>
-    <div class="field-row">
-      <input type="checkbox" id="shortcut-ok" />
-      <label for="shortcut-ok">Shortcut created / I am on a computer</label>
-    </div>
-    <p class="hint"><button type="button" id="setup-skip">Continue in this window (not recommended)</button></p>`;
+    <p class="hint">Click <b>Next</b> to run here. Optional: browser menu → Install app, or F11 for full screen after Setup.</p>`;
 }
 
 function bindStep(el, st, plat, ctx) {

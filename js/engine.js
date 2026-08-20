@@ -184,6 +184,16 @@ export function playChord(kind = "start") {
   }
 }
 
+export function isDesktopShell() {
+  return window.matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)").matches;
+}
+
+export function syncShellClass() {
+  const desk = isDesktopShell();
+  document.body.classList.toggle("desktop-shell", desk);
+  document.body.classList.toggle("mobile-shell", !desk);
+}
+
 export function isStandalone() {
   const mq = window.matchMedia && window.matchMedia("(display-mode: standalone)").matches;
   return mq || window.navigator.standalone === true;

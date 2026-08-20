@@ -19,6 +19,7 @@ import { openApp, setTitle, escapeHtml, refreshApp, isOpen, registerApp, getApp 
 import { img } from "./icons.js";
 import { PHOTOS, PARTY_ROLL, BUDDIES, FILES, TEXTS, WIKI, wikiBody, parseRich, escapeText } from "./story.js";
 import { CHATS } from "./chats.js";
+import { isDesktopShell } from "./engine.js";
 
 export function openLink(ref) {
   const [kind, id] = String(ref).split(":");
@@ -178,26 +179,22 @@ function registerMessenger() {
     icon: "messenger",
     render(body, opts) {
       if (opts.buddy) state.currentBuddy = opts.buddy;
-      if (state.currentBuddy) renderChat(body, state.currentBuddy);
+      if (isDesktopShell()) renderMessengerDesktop(body);
+      else if (state.currentBuddy) renderChat(body, state.currentBuddy);
       else renderBuddyList(body);
     },
   });
 }
 
-function renderBuddyList(body) {
-  setTitle("messenger", "BuddyBee — moonpixie98");
+function buddyButtonsHtml() {
   const order = ["jess", "lauren", "chloe", "britt", "tyler", "mandy"];
-  body.innerHTML = `
-    <div class="im-layout">
-      <div class="app-scroll buddy-list">
-        <p style="margin:4px 8px;font-size:12px;">Sign-on name: <b>moonpixie98</b> &nbsp; 56k • Connected</p>
-        ${order
-          .map((id) => {
-            const b = BUDDIES[id];
-            const locked = b.locked && !flag("tyler_unlocked") && !flag("asked_tyler_jess") && !flag("read_file");
-            const unread = state.unread[id] || 0;
-            const on = id === "mandy" ? flag("mandy_signed_on") && state.climax < 6 : b.online || (id === "tyler" && !locked);
-            return `<button type="button" class="buddy" data-buddy="${id}" ${locked ? "disabled" : ""}>
+  return order
+    .map((id) => {
+      const b = BUDDIES[id];
+      const locked = b.locked && !flag("tyler_unlocked") && !flag("asked_tyler_jess") && !flag("read_file");
+      const unread = state.unread[id] || 0;
+      const on = id === "mandy" ? flag("mandy_signed_on") && state.climax < 6 : b.online || (id === "tyler" && !locked);
+      return `<button type="button" class="buddy" data-buddy="${id}" ${locked ? "disabled" : ""}>
               <span class="dot ${on ? "on" : "off"}"></span>
               <span class="meta">
                 <span class="sn" style="color:${b.color}">${escapeHtml(b.sn)}</span>
@@ -205,8 +202,38 @@ function renderBuddyList(body) {
               </span>
               ${unread ? `<span class="badge">${unread}</span>` : ""}
             </button>`;
-          })
-          .join("")}
+    })
+    .join("");
+}
+
+function renderMessengerDesktop(body) {
+  setTitle("messenger", "BuddyBee — moonpixie98");
+  body.innerHTML = `
+    <div class="im-split">
+      <div class="im-side" id="im-side">
+        <p style="margin:4px 8px;font-size:12px;">moonpixie98 • 56k</p>
+        <div class="buddy-list">${buddyButtonsHtml()}</div>
+      </div>
+      <div class="im-main" id="im-main"></div>
+    </div>`;
+  body.querySelectorAll("[data-buddy]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.currentBuddy = btn.getAttribute("data-buddy");
+      renderChat(body.querySelector("#im-main"), state.currentBuddy);
+    });
+  });
+  const main = body.querySelector("#im-main");
+  if (state.currentBuddy) renderChat(main, state.currentBuddy);
+  else main.innerHTML = `<div class="im-empty">Select a buddy to send an Instant Message.<br>Windows can overlap — drag the title bar.</div>`;
+}
+
+function renderBuddyList(body) {
+  setTitle("messenger", "BuddyBee — moonpixie98");
+  body.innerHTML = `
+    <div class="im-layout">
+      <div class="app-scroll buddy-list">
+        <p style="margin:4px 8px;font-size:12px;">Sign-on name: <b>moonpixie98</b> &nbsp; 56k • Connected</p>
+        ${buddyButtonsHtml()}
       </div>
       <div class="status-bar"><p class="status-bar-field">${clueCount()} note(s) in ScratchPad memory</p></div>
     </div>`;
@@ -239,7 +266,9 @@ function renderChat(body, buddyId) {
     </div>`;
   body.querySelector("[data-back-buddies]").addEventListener("click", () => {
     state.currentBuddy = null;
-    renderBuddyList(body);
+    const root = document.getElementById("body-messenger");
+    if (isDesktopShell() && root?.querySelector("#im-side")) renderMessengerDesktop(root);
+    else renderBuddyList(root || body);
   });
   bindLinks(body);
   const logEl = body.querySelector("#chat-log");
@@ -369,10 +398,28 @@ export function injectNode(buddyId, nodeId) {
   paintDesktop();
   playBeep();
   const body = document.getElementById("body-messenger");
-  if (isOpen("messenger") && state.currentBuddy === buddyId && body) {
+  if (!isOpen("messenger") || !body) {
+    emit("im", { buddyId, nodeId });
+    return;
+  }
+  const main = body.querySelector("#im-main");
+  const side = body.querySelector("#im-side");
+  if (side && main) {
+    side.querySelector(".buddy-list").innerHTML = buddyButtonsHtml();
+    side.querySelectorAll("[data-buddy]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.currentBuddy = btn.getAttribute("data-buddy");
+        renderChat(main, state.currentBuddy);
+      });
+    });
+    if (state.currentBuddy === buddyId) {
+      chat.pendingNode = null;
+      playNode(main, buddyId, nodeId);
+    }
+  } else if (state.currentBuddy === buddyId) {
     chat.pendingNode = null;
     playNode(body, buddyId, nodeId);
-  } else if (isOpen("messenger") && body && !state.currentBuddy) {
+  } else if (!state.currentBuddy) {
     renderBuddyList(body);
   }
   emit("im", { buddyId, nodeId });
@@ -850,6 +897,8 @@ function registerHelp() {
         <p>4. Write it in <b>ScratchPad</b> or it will rearrange itself.</p>
         <p>5. Encyclopedia Tropicana is for when you want a dead girl in 1978 to be the explanation.</p>
         <p>6. You can shut down anytime. It will not help.</p>
+        <p>On a phone: tap everything. Windows fill the screen; use the taskbar to switch.</p>
+        <p>On a PC: the desktop is the whole window. Drag a title bar, resize from the edges, minimize/maximize, double-click the title bar. Press F11 for full screen.</p>
       </div>`;
     },
   });
