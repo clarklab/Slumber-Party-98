@@ -233,6 +233,25 @@ export function openApp(id, opts = {}) {
   emit("open", { id, opts });
 }
 
+export function waitUntilDismissed(id) {
+  const gone = () => {
+    const el = document.getElementById(`win-${id}`);
+    const top = openOrder[openOrder.length - 1];
+    return !el || el.classList.contains("minimized") || top !== id;
+  };
+  if (gone()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const tick = () => {
+      if (!gone()) return;
+      offClose();
+      offFocus();
+      resolve();
+    };
+    const offClose = on("window-closed", tick);
+    const offFocus = on("focus", tick);
+  });
+}
+
 export function closeApp(id) {
   const el = document.getElementById(`win-${id}`);
   if (el) {
@@ -246,6 +265,7 @@ export function closeApp(id) {
   const last = openOrder[openOrder.length - 1];
   if (last) focusApp(last);
   else updateAppHold();
+  emit("window-closed", { id });
 }
 
 export function minimizeApp(id) {
@@ -256,6 +276,7 @@ export function minimizeApp(id) {
   releaseWindow(id);
   paintTaskbar();
   updateAppHold();
+  emit("window-closed", { id });
 }
 
 function releaseWindow(id) {
@@ -295,6 +316,7 @@ export function focusApp(id) {
   if (el) el.style.zIndex = String(20 + openOrder.length);
   paintTaskbar();
   updateAppHold();
+  emit("focus", { id });
 }
 
 export function setTitle(id, title) {

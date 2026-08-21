@@ -20,7 +20,7 @@ import {
   onIdle,
   isHeld,
 } from "./engine.js";
-import { openApp, setTitle, escapeHtml, refreshApp, isOpen, registerApp, getApp, flashTask } from "./wm.js";
+import { openApp, setTitle, escapeHtml, refreshApp, isOpen, registerApp, getApp, flashTask, waitUntilDismissed } from "./wm.js";
 import { img } from "./icons.js";
 import { PHOTOS, PARTY_ROLL, BUDDIES, FILES, TEXTS, WIKI, wikiBody, parseRich, escapeText } from "./story.js";
 import { CHATS } from "./chats.js";
@@ -327,9 +327,10 @@ async function playNode(body, buddyId, nodeId) {
         if (t.includes("signed on")) play("signon");
         else if (t.includes("signed off")) play("signoff");
       } else if (m.from !== "sarah") playBeep();
-    }
-    if (nodeId === "proof" && gen === streamGen) {
-      viewPhoto("proof", { force: true });
+      if (m.photo === "proof" && live()) {
+        viewPhoto("proof", { force: true });
+        await waitUntilDismissed("photo");
+      }
     }
     if (live()) showChoices(body, buddyId, nodeId);
   } finally {
@@ -344,35 +345,52 @@ function showChoices(body, buddyId, nodeId) {
   hold("choices");
   const choices = node.choices || [];
   if (!choices.length) {
-    choiceEl.innerHTML = `<button type="button" data-back-buddies>Back to Buddy List</button>`;
-    choiceEl.querySelector("[data-back-buddies]")?.addEventListener("click", () => goBuddyList(body));
+    const label = node.exit || "Back to Buddy List";
+    choiceEl.innerHTML = `<button type="button" class="default" data-exit>${escapeHtml(label)}</button>`;
+    choiceEl.querySelector("[data-exit]")?.addEventListener("click", () => {
+      play("send");
+      signalAck(buddyId);
+      goBuddyList(body);
+    });
     return;
   }
   choiceEl.innerHTML = choices
     .map((c, i) => `<button type="button" data-choice="${i}">${escapeHtml(c.text)}</button>`)
     .join("");
   choiceEl.querySelectorAll("[data-choice]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const c = choices[Number(btn.getAttribute("data-choice"))];
-      play("send");
-      signalAck(buddyId);
-      release("choices");
-      (c.flags || []).forEach((f) => setFlag(f));
-      if (c.notes) pinNote(c.notes);
-      const chat = ensureChat(buddyId);
-      const you = { from: "sarah", text: c.text };
-      chat.log.push(you);
-      const logEl = body.querySelector("#chat-log");
-      appendMsg(logEl, you);
-      if (c.open?.photo) viewPhoto(c.open.photo);
-      if (c.open?.buddy) {
-        state.currentBuddy = c.open.buddy;
-        openApp("messenger", { buddy: c.open.buddy });
-        return;
-      }
-      playNode(body, buddyId, c.next);
-    });
+    btn.addEventListener("click", () => pickChoice(body, buddyId, nodeId, choices, Number(btn.getAttribute("data-choice"))));
   });
+}
+
+async function pickChoice(body, buddyId, nodeId, choices, index) {
+  const c = choices[index];
+  if (!c) return;
+  play("send");
+  signalAck(buddyId);
+  release("choices");
+  (c.flags || []).forEach((f) => setFlag(f));
+  if (c.notes) pinNote(c.notes);
+  const chat = ensureChat(buddyId);
+  const you = { from: "sarah", text: c.text };
+  chat.log.push(you);
+  const logEl = body.querySelector("#chat-log");
+  appendMsg(logEl, you);
+  if (c.exit) {
+    goBuddyList(body);
+    return;
+  }
+  if (c.open?.photo) {
+    viewPhoto(c.open.photo);
+    await waitUntilDismissed("photo");
+    if (state.currentBuddy !== buddyId || !document.body.contains(body)) return;
+  }
+  if (c.open?.buddy) {
+    if (c.next) chat.pendingNode = c.next;
+    state.currentBuddy = c.open.buddy;
+    openApp("messenger", { buddy: c.open.buddy });
+    return;
+  }
+  if (c.next) playNode(body, buddyId, c.next);
 }
 
 function appendMsg(logEl, m) {
@@ -404,6 +422,7 @@ function appendMsg(logEl, m) {
 }
 
 function goBuddyList(fromEl) {
+  streamGen += 1;
   signalAck(state.currentBuddy);
   release("choices");
   release("stream");
@@ -414,6 +433,7 @@ function goBuddyList(fromEl) {
 }
 
 function openBuddyChat(body, buddyId) {
+  streamGen += 1;
   if (state.currentBuddy) signalAck(state.currentBuddy);
   release("choices");
   state.currentBuddy = buddyId;
