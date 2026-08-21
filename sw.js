@@ -1,4 +1,4 @@
-const CACHE = "hs98-v9";
+const CACHE = "hs98-v11";
 const ASSETS = [
   "./",
   "./index.html",
@@ -30,6 +30,8 @@ const ASSETS = [
   "./img/mandy-yearbook.jpg",
   "./img/icon-192.png",
   "./img/icon-512.png",
+  "./img/icon-maskable-192.png",
+  "./img/icon-maskable-512.png",
   "./img/apple-touch-icon.png",
   "./img/favicon-32.png",
 ];
