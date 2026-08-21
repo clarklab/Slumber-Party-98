@@ -119,6 +119,7 @@ export const CHATS = {
       choices: [
         { text: "you still there?", next: "wait" },
         { text: "about the movie — why that tape?", next: "movie" },
+        { text: "brb.", exit: true },
       ],
     },
     police: {
@@ -140,7 +141,7 @@ export const CHATS = {
       messages: [
         { from: "jess", text: "then you stay signed on. you don't get to disappear into a computer." },
       ],
-      choices: [],
+      exit: "i'm here.",
     },
     found: {
       flags: ["body_found"],
@@ -151,7 +152,7 @@ export const CHATS = {
         { from: "jess", text: "the creek. chloe's stupid letters. the shortcut off maple." },
         { from: "jess", text: "lo is on the other line with her sister. she keeps saying she has one more picture. sarah what does that mean." },
       ],
-      choices: [{ text: "i don't know.", next: "police2" }],
+      choices: [{ text: "i don't know.", exit: true }],
     },
     movie: {
       messages: [
@@ -327,6 +328,7 @@ export const CHATS = {
       choices: [
         { text: "lo?", next: "hold" },
         { text: "walk me through pizza again.", next: "start" },
+        { text: "i'll look around.", exit: true },
       ],
     },
     proof: {
@@ -380,7 +382,7 @@ export const CHATS = {
         { from: "lauren", text: "i'm sorry. i'm not sorry enough to keep it." },
         { from: "sys", text: "laurendoodles has signed off" },
       ],
-      choices: [],
+      exit: "...",
     },
   },
 
@@ -456,7 +458,10 @@ export const CHATS = {
     },
     idle: {
       messages: [{ from: "sys", text: "darkstarchloe is compiling 'evidence' in a WordPad file named SPIRIT.doc" }],
-      choices: [{ text: "don't tell the cops about the board.", next: "mom" }],
+      choices: [
+        { text: "don't tell the cops about the board.", next: "mom" },
+        { text: "i have to go.", exit: true },
+      ],
     },
   },
 
@@ -516,7 +521,7 @@ export const CHATS = {
     },
     idle2: {
       messages: [{ from: "sys", text: "soccerbrit99 set her away message to 'this is so extra' again, weaker." }],
-      choices: [],
+      exit: "ok.",
     },
     proof: {
       flags: ["britt_saw_proof"],
@@ -537,7 +542,7 @@ export const CHATS = {
         { from: "britt", text: "it looks like you." },
         { from: "britt", text: "that's the whole problem." },
       ],
-      choices: [],
+      exit: "...",
     },
   },
 
@@ -572,7 +577,7 @@ export const CHATS = {
     },
     idle: {
       messages: [{ from: "sys", text: "tytyb_11 is idle. his away message keeps changing." }],
-      choices: [],
+      exit: "ok.",
     },
   },
 
@@ -594,7 +599,7 @@ export const CHATS = {
       messages: [
         { from: "sys", text: "Message queued. xXMandyHeartsXx has not signed on." },
       ],
-      choices: [],
+      exit: "ok.",
     },
     ghost: {
       flags: ["mandy_signed_on"],
@@ -605,7 +610,7 @@ export const CHATS = {
         { from: "mandy", text: "you have the picture now" },
         { from: "sys", text: "xXMandyHeartsXx has signed off" },
       ],
-      choices: [],
+      exit: "...",
     },
   },
 };

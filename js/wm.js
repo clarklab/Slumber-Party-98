@@ -1,4 +1,4 @@
-import { state, emit, on, dateStr, isDesktopShell, syncShellClass } from "./engine.js";
+import { state, emit, on, dateStr, isDesktopShell, syncShellClass, hold, release, signalAck } from "./engine.js";
 import { icons } from "./icons.js";
 import { play, bindAudio, toggleMuted, paintMuteButton, isMuted } from "./audio.js";
 
@@ -233,6 +233,25 @@ export function openApp(id, opts = {}) {
   emit("open", { id, opts });
 }
 
+export function waitUntilDismissed(id) {
+  const gone = () => {
+    const el = document.getElementById(`win-${id}`);
+    const top = openOrder[openOrder.length - 1];
+    return !el || el.classList.contains("minimized") || top !== id;
+  };
+  if (gone()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const tick = () => {
+      if (!gone()) return;
+      offClose();
+      offFocus();
+      resolve();
+    };
+    const offClose = on("window-closed", tick);
+    const offFocus = on("focus", tick);
+  });
+}
+
 export function closeApp(id) {
   const el = document.getElementById(`win-${id}`);
   if (el) {
@@ -241,9 +260,12 @@ export function closeApp(id) {
   }
   const i = openOrder.indexOf(id);
   if (i >= 0) openOrder.splice(i, 1);
+  releaseWindow(id);
   paintTaskbar();
   const last = openOrder[openOrder.length - 1];
   if (last) focusApp(last);
+  else updateAppHold();
+  emit("window-closed", { id });
 }
 
 export function minimizeApp(id) {
@@ -251,7 +273,32 @@ export function minimizeApp(id) {
   if (el) el.classList.add("minimized");
   const i = openOrder.indexOf(id);
   if (i >= 0) openOrder.splice(i, 1);
+  releaseWindow(id);
   paintTaskbar();
+  updateAppHold();
+  emit("window-closed", { id });
+}
+
+function releaseWindow(id) {
+  if (id === "messenger") {
+    const chatting = state.currentBuddy;
+    release("stream");
+    release("choices");
+    if (chatting) signalAck(chatting);
+    state.currentBuddy = null;
+  }
+}
+
+let appHoldId = null;
+
+function updateAppHold() {
+  const id = openOrder[openOrder.length - 1];
+  const el = id && document.getElementById(`win-${id}`);
+  const next = el && !el.classList.contains("minimized") && id !== "messenger" ? id : null;
+  if (appHoldId === next) return;
+  if (appHoldId) release("app:" + appHoldId);
+  appHoldId = next;
+  if (appHoldId) hold("app:" + appHoldId);
 }
 
 export function focusApp(id) {
@@ -268,6 +315,8 @@ export function focusApp(id) {
   const el = document.getElementById(`win-${id}`);
   if (el) el.style.zIndex = String(20 + openOrder.length);
   paintTaskbar();
+  updateAppHold();
+  emit("focus", { id });
 }
 
 export function setTitle(id, title) {

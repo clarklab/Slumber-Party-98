@@ -14,8 +14,13 @@ import {
   clearUnread,
   markUnread,
   clueCount,
+  hold,
+  release,
+  signalAck,
+  onIdle,
+  isHeld,
 } from "./engine.js";
-import { openApp, setTitle, escapeHtml, refreshApp, isOpen, registerApp, getApp, flashTask } from "./wm.js";
+import { openApp, setTitle, escapeHtml, refreshApp, isOpen, registerApp, getApp, flashTask, waitUntilDismissed } from "./wm.js";
 import { img } from "./icons.js";
 import { PHOTOS, PARTY_ROLL, BUDDIES, FILES, TEXTS, WIKI, wikiBody, parseRich, escapeText } from "./story.js";
 import { CHATS } from "./chats.js";
@@ -221,8 +226,7 @@ function renderMessengerDesktop(body) {
     </div>`;
   body.querySelectorAll("[data-buddy]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      state.currentBuddy = btn.getAttribute("data-buddy");
-      renderChat(body.querySelector("#im-main"), state.currentBuddy);
+      openBuddyChat(body.querySelector("#im-main"), btn.getAttribute("data-buddy"));
     });
   });
   const main = body.querySelector("#im-main");
@@ -242,8 +246,7 @@ function renderBuddyList(body) {
     </div>`;
   body.querySelectorAll("[data-buddy]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      state.currentBuddy = btn.getAttribute("data-buddy");
-      renderChat(body, state.currentBuddy);
+      openBuddyChat(body, btn.getAttribute("data-buddy"));
     });
   });
 }
@@ -252,6 +255,7 @@ function renderChat(body, buddyId) {
   const b = BUDDIES[buddyId];
   if (!b) return renderBuddyList(body);
   if (buddyId === "tyler") setFlag("tyler_unlocked");
+  consumeBalloon(buddyId);
   clearUnread(buddyId);
   paintDesktop();
   setTitle("messenger", `BuddyBee — ${b.sn}`);
@@ -284,81 +288,109 @@ function renderChat(body, buddyId) {
   }
 }
 
+let streamGen = 0;
+
 async function playNode(body, buddyId, nodeId) {
   const tree = CHATS[buddyId];
   const node = tree && tree[nodeId];
   const chat = ensureChat(buddyId);
   if (!node) return;
+  const gen = ++streamGen;
+  hold("stream");
+  release("choices");
   chat.node = nodeId;
   (node.flags || []).forEach((f) => setFlag(f));
   (node.clues || []).forEach((c) => addClue(c.id, c.note));
   const logEl = body.querySelector("#chat-log");
   const typeEl = body.querySelector("#chat-typing");
   const choiceEl = body.querySelector("#chat-choices");
-  if (!logEl) return;
-  choiceEl.innerHTML = "";
-  for (const m of node.messages) {
-    if (state.currentBuddy !== buddyId || !document.body.contains(logEl)) {
+  if (!logEl) {
+    if (gen === streamGen) release("stream");
+    return;
+  }
+  if (choiceEl) choiceEl.innerHTML = "";
+  const live = () => gen === streamGen && state.currentBuddy === buddyId && document.body.contains(logEl);
+  try {
+    for (const m of node.messages) {
+      if (live() && typeEl && m.from !== "sys") {
+        typeEl.hidden = false;
+        typeEl.textContent = `${BUDDIES[m.from]?.sn || m.from} is typing...`;
+      }
+      if (live()) await sleep(m.from === "sys" ? 200 : 650);
+      if (typeEl && live()) typeEl.hidden = true;
       chat.log.push(m);
-      continue;
+      if (!live()) continue;
+      appendMsg(logEl, m);
+      logEl.scrollTop = logEl.scrollHeight;
+      if (m.from === "sys") {
+        const t = String(m.text).toLowerCase();
+        if (t.includes("signed on")) play("signon");
+        else if (t.includes("signed off")) play("signoff");
+      } else if (m.from !== "sarah") playBeep();
+      if (m.photo === "proof" && live()) {
+        viewPhoto("proof", { force: true });
+        await waitUntilDismissed("photo");
+      }
     }
-    if (typeEl && m.from !== "sys") {
-      typeEl.hidden = false;
-      typeEl.textContent = `${BUDDIES[m.from]?.sn || m.from} is typing...`;
-    }
-    await sleep(m.from === "sys" ? 200 : 650);
-    if (typeEl) typeEl.hidden = true;
-    chat.log.push(m);
-    appendMsg(logEl, m);
-    logEl.scrollTop = logEl.scrollHeight;
-    if (m.from === "sys") {
-      const t = String(m.text).toLowerCase();
-      if (t.includes("signed on")) play("signon");
-      else if (t.includes("signed off")) play("signoff");
-    } else if (m.from !== "sarah") playBeep();
-    if (m.photo) {
-      /* thumb already in message */
-    }
+    if (live()) showChoices(body, buddyId, nodeId);
+  } finally {
+    if (gen === streamGen) release("stream");
   }
-  if (nodeId === "proof") {
-    viewPhoto("proof", { force: true });
-  }
-  showChoices(body, buddyId, nodeId);
 }
 
 function showChoices(body, buddyId, nodeId) {
   const node = CHATS[buddyId]?.[nodeId];
   const choiceEl = body.querySelector("#chat-choices");
   if (!choiceEl || !node) return;
+  hold("choices");
   const choices = node.choices || [];
   if (!choices.length) {
-    choiceEl.innerHTML = `<button type="button" data-back-buddies>Back to Buddy List</button>`;
-    choiceEl.querySelector("[data-back-buddies]")?.addEventListener("click", () => goBuddyList(body));
+    const label = node.exit || "Back to Buddy List";
+    choiceEl.innerHTML = `<button type="button" class="default" data-exit>${escapeHtml(label)}</button>`;
+    choiceEl.querySelector("[data-exit]")?.addEventListener("click", () => {
+      play("send");
+      signalAck(buddyId);
+      goBuddyList(body);
+    });
     return;
   }
   choiceEl.innerHTML = choices
     .map((c, i) => `<button type="button" data-choice="${i}">${escapeHtml(c.text)}</button>`)
     .join("");
   choiceEl.querySelectorAll("[data-choice]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const c = choices[Number(btn.getAttribute("data-choice"))];
-      play("send");
-      (c.flags || []).forEach((f) => setFlag(f));
-      if (c.notes) pinNote(c.notes);
-      const chat = ensureChat(buddyId);
-      const you = { from: "sarah", text: c.text };
-      chat.log.push(you);
-      const logEl = body.querySelector("#chat-log");
-      appendMsg(logEl, you);
-      if (c.open?.photo) viewPhoto(c.open.photo);
-      if (c.open?.buddy) {
-        state.currentBuddy = c.open.buddy;
-        openApp("messenger", { buddy: c.open.buddy });
-        return;
-      }
-      playNode(body, buddyId, c.next);
-    });
+    btn.addEventListener("click", () => pickChoice(body, buddyId, nodeId, choices, Number(btn.getAttribute("data-choice"))));
   });
+}
+
+async function pickChoice(body, buddyId, nodeId, choices, index) {
+  const c = choices[index];
+  if (!c) return;
+  play("send");
+  signalAck(buddyId);
+  release("choices");
+  (c.flags || []).forEach((f) => setFlag(f));
+  if (c.notes) pinNote(c.notes);
+  const chat = ensureChat(buddyId);
+  const you = { from: "sarah", text: c.text };
+  chat.log.push(you);
+  const logEl = body.querySelector("#chat-log");
+  appendMsg(logEl, you);
+  if (c.exit) {
+    goBuddyList(body);
+    return;
+  }
+  if (c.open?.photo) {
+    viewPhoto(c.open.photo);
+    await waitUntilDismissed("photo");
+    if (state.currentBuddy !== buddyId || !document.body.contains(body)) return;
+  }
+  if (c.open?.buddy) {
+    if (c.next) chat.pendingNode = c.next;
+    state.currentBuddy = c.open.buddy;
+    openApp("messenger", { buddy: c.open.buddy });
+    return;
+  }
+  if (c.next) playNode(body, buddyId, c.next);
 }
 
 function appendMsg(logEl, m) {
@@ -390,14 +422,25 @@ function appendMsg(logEl, m) {
 }
 
 function goBuddyList(fromEl) {
+  streamGen += 1;
+  signalAck(state.currentBuddy);
+  release("choices");
+  release("stream");
   state.currentBuddy = null;
   const root = document.getElementById("body-messenger");
   if (isDesktopShell() && root?.querySelector("#im-side")) renderMessengerDesktop(root);
   else renderBuddyList(root || fromEl);
 }
 
-const balloonQ = [];
-let balloonTimer = 0;
+function openBuddyChat(body, buddyId) {
+  streamGen += 1;
+  if (state.currentBuddy) signalAck(state.currentBuddy);
+  release("choices");
+  state.currentBuddy = buddyId;
+  renderChat(body, buddyId);
+}
+
+let balloonQ = [];
 
 function stripImText(text) {
   return String(text || "")
@@ -413,24 +456,42 @@ export function showImAlert(buddyId, nodeId) {
   const node = CHATS[buddyId]?.[nodeId];
   const msgs = node?.messages || [];
   const raw = msgs.find((m) => m.from !== "sys") || msgs[0];
+  if (balloonQ.some((x) => x.buddyId === buddyId && x.nodeId === nodeId)) return;
   balloonQ.push({
     buddyId,
+    nodeId,
     sn: b?.sn || buddyId,
     color: b?.color || "#000080",
     body: stripImText(raw?.text) || "Instant Message",
   });
-  if (balloonQ.length === 1) paintBalloon();
+  const host = document.getElementById("balloon-root");
+  if (host?.querySelector("#im-balloon")) return;
+  if (isHeld()) onIdle(paintBalloon);
+  else paintBalloon();
+}
+
+function consumeBalloon(buddyId) {
+  const host = document.getElementById("balloon-root");
+  const showing = balloonQ[0];
+  balloonQ = balloonQ.filter((x) => x.buddyId !== buddyId);
+  if (showing?.buddyId !== buddyId) return;
+  if (host) host.innerHTML = "";
+  release("balloon");
+  if (balloonQ.length) onIdle(paintBalloon);
 }
 
 function paintBalloon() {
   const host = document.getElementById("balloon-root");
   if (!host) return;
-  clearTimeout(balloonTimer);
   const item = balloonQ[0];
   if (!item) {
     host.innerHTML = "";
+    release("balloon");
     return;
   }
+  if (host.querySelector("#im-balloon")) return;
+  hold("balloon");
+  play("im");
   host.innerHTML = `
     <button type="button" class="balloon" id="im-balloon">
       <span class="balloon-app">${img("messenger")} Instant Message</span>
@@ -439,13 +500,11 @@ function paintBalloon() {
     </button>`;
   host.querySelector("#im-balloon").addEventListener("click", () => {
     balloonQ.shift();
+    host.innerHTML = "";
     openApp("messenger", { buddy: item.buddyId });
-    paintBalloon();
+    release("balloon");
+    if (balloonQ.length) onIdle(paintBalloon);
   });
-  balloonTimer = setTimeout(() => {
-    balloonQ.shift();
-    paintBalloon();
-  }, 7000);
 }
 
 function paintDocTitle() {
@@ -468,7 +527,6 @@ export function injectNode(buddyId, nodeId) {
   if (!watching) {
     markUnread(buddyId, 1);
     if (nodeId === "ghost") play("signon");
-    play("im");
     flashTask("messenger");
     showImAlert(buddyId, nodeId);
   }
@@ -484,8 +542,7 @@ export function injectNode(buddyId, nodeId) {
     side.querySelector(".buddy-list").innerHTML = buddyButtonsHtml();
     side.querySelectorAll("[data-buddy]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        state.currentBuddy = btn.getAttribute("data-buddy");
-        renderChat(main, state.currentBuddy);
+        openBuddyChat(main, btn.getAttribute("data-buddy"));
       });
     });
     if (state.currentBuddy === buddyId) {
